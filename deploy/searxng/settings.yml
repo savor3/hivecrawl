@@ -1,0 +1,142 @@
+# SearXNG as HiveCrawl's engine backend. Not exposed outside the compose
+# network; only the hivecrawl container talks to it.
+#
+# Normal searches use the direct engines from this node's own IP. Each has a
+# "<name> warp" copy that goes out through Cloudflare WARP; the copies are
+# disabled, so they only run when HiveCrawl asks for them by name after the
+# direct engine was blocked.
+use_default_settings:
+  engines:
+    keep_only:
+      - google cse
+      - brave
+      - duckduckgo
+      - startpage
+      - mojeek
+      - wikipedia
+      # images (sources: ["images"])
+      - google images
+      - brave.images
+      - duckduckgo images
+      - startpage images
+      - mojeek images
+      - wikicommons.images
+      # news (sources: ["news"]); these carry publish dates
+      - google news
+      - brave.news
+      - duckduckgo news
+      - startpage news
+      - yahoo news
+      - mojeek news
+      - wikinews
+    # Not bing: it serves scrapers plausible-looking but unrelated results
+    # instead of blocking them, which poisons merged results.
+server:
+  limiter: false
+  bind_address: "0.0.0.0"
+  public_instance: false
+search:
+  formats: [html, json]
+outgoing:
+  request_timeout: 4.0
+engines:
+  - name: startpage
+    disabled: false
+  - name: mojeek
+    disabled: false
+  - name: startpage images
+    disabled: false
+  - name: startpage news
+    disabled: false
+  - name: mojeek images
+    disabled: false
+  - name: mojeek news
+    disabled: false
+  - name: yahoo news
+    disabled: false
+    inactive: false  # default inactive; one more news engine on the direct route
+  - name: wikinews
+    disabled: false
+
+  # ---- WARP fallbacks (selected explicitly by HiveCrawl) ----
+  - name: google cse warp
+    engine: google_cse
+    shortcut: gocw
+    disabled: true
+    proxies: &warp
+      all://:
+        - socks5h://warp:40000
+  - name: brave warp
+    engine: brave
+    shortcut: brw
+    brave_category: search
+    time_range_support: true
+    paging: true
+    categories: [general, web]
+    disabled: true
+    proxies: *warp
+  - name: duckduckgo warp
+    engine: duckduckgo
+    shortcut: ddgw
+    disabled: true
+    proxies: *warp
+  - name: startpage warp
+    engine: startpage
+    shortcut: spw
+    startpage_categ: web
+    disabled: true
+    proxies: *warp
+  - name: mojeek warp
+    engine: mojeek
+    shortcut: mjkw
+    categories: [general, web]
+    disabled: true
+    proxies: *warp
+  # News and image copies. No "network:" so they never share the direct
+  # engine's (unproxied) network.
+  - name: google news warp
+    engine: google_news
+    shortcut: gonw
+    categories: [news]
+    disabled: true
+    proxies: *warp
+  - name: brave.news warp
+    engine: brave
+    shortcut: brnw
+    categories: [news]
+    brave_category: news
+    disabled: true
+    proxies: *warp
+  - name: duckduckgo news warp
+    engine: duckduckgo_extra
+    shortcut: ddnw
+    categories: [news]
+    ddg_category: news
+    disabled: true
+    proxies: *warp
+  - name: yahoo news warp
+    engine: yahoo_news
+    shortcut: yhnw
+    categories: [news]
+    disabled: true
+    proxies: *warp
+  - name: google images warp
+    engine: google_images
+    shortcut: goiw
+    categories: [images]
+    disabled: true
+    proxies: *warp
+  - name: brave.images warp
+    engine: brave
+    shortcut: brimw
+    categories: [images]
+    brave_category: images
+    disabled: true
+    proxies: *warp
+  - name: duckduckgo images warp
+    engine: duckduckgo_extra
+    shortcut: ddiw
+    categories: [images]
+    ddg_category: images
+    disabled: true
+    proxies: *warp

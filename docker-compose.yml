@@ -1,0 +1,81 @@
+# One HiveCrawl node with its own SearXNG and Cloudflare WARP fallback.
+#   cp .env.example .env   # then edit
+#   docker compose up -d --build
+services:
+  hivecrawl:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      HC_HOST_PORT: ${HC_PORT:-3002} # for the printed sign-in link
+      HC_SEARXNG_URL: http://searxng:8080
+      HC_WARP_SOCKS: warp:40000
+      HC_BROWSER: browser:9222
+    volumes:
+      - hc-data:/data # node identity key: keep it, or the node gets a new ID
+    # Bound to localhost: put Caddy/nginx in front for HTTPS on a public server.
+    # A home node needs no published port at all; it only dials out.
+    ports:
+      - "127.0.0.1:${HC_PORT:-3002}:3002"
+    dns: [1.1.1.1, 8.8.8.8]
+    depends_on: [searxng, browser]
+    networks: [default, browsernet]
+    # Lets a node use an Ollama running on the same machine (Settings → Ollama).
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    mem_limit: 256m # a public relay holding ~1000 home tunnels needs ~100 MB
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+
+  searxng:
+    image: searxng/searxng:latest
+    restart: unless-stopped
+    environment:
+      SEARXNG_SECRET: ${SEARXNG_SECRET:?set SEARXNG_SECRET in .env}
+    volumes:
+      - ./deploy/searxng/settings.yml:/etc/searxng/settings.yml:ro
+    # Engine lookups go to public resolvers, not the ISP / cloud resolver.
+    dns: [1.1.1.1, 8.8.8.8]
+    depends_on: [warp]
+    mem_limit: 300m
+    cap_drop: [ALL]
+    cap_add: [SETUID, SETGID, CHOWN, DAC_OVERRIDE] # entrypoint drops to the searxng user
+    security_opt: [no-new-privileges:true]
+
+  # Cloudflare WARP as a SOCKS5 proxy, used only by SearXNG's "<engine> warp"
+  # fallbacks after the direct engine is blocked. Not published on the host.
+  warp:
+    build: ./deploy/warp
+    restart: unless-stopped
+    volumes:
+      - warp-data:/data
+    dns: [1.1.1.1, 8.8.8.8]
+    mem_limit: 48m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+
+  # Headless Chrome for JavaScript pages, actions and screenshots. It is on
+  # its own network with only the hivecrawl node, and the node refuses any
+  # request a page makes to internal addresses.
+  browser:
+    image: chromedp/headless-shell:155.0.8059.40
+    restart: unless-stopped
+    shm_size: 512m
+    mem_limit: 1g
+    networks: [browsernet]
+    dns: [1.1.1.1, 8.8.8.8]
+    # Unprivileged user, no Linux capabilities, read-only filesystem: a page
+    # that exploited Chrome would land in an empty box that can't write or escalate.
+    user: "65534:65534"
+    environment: { HOME: /tmp }
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+
+networks:
+  browsernet: {}
+
+volumes:
+  hc-data:
+  warp-data:

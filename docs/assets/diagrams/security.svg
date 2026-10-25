@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" role="img" aria-label="What can reach what"><title>What can reach what</title><defs><filter id="sh" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#5a4a20" flood-opacity=".09"/></filter><marker id="ae2900c" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e2900c"/></marker><marker id="se2900c" viewBox="0 0 10 10" refX="1.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e2900c"/></marker><marker id="a5b6675" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5b6675"/></marker><marker id="s5b6675" viewBox="0 0 10 10" refX="1.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5b6675"/></marker><marker id="ac2410c" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c2410c"/></marker><marker id="sc2410c" viewBox="0 0 10 10" refX="1.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c2410c"/></marker><marker id="a12897f" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#12897f"/></marker><marker id="s12897f" viewBox="0 0 10 10" refX="1.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#12897f"/></marker></defs><rect width="100%" height="100%" fill="#f5f6f8"/>
+<text x="60" y="64" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="26" font-weight="750" fill="#1f2a37" text-anchor="start">What can reach what</text>
+<text x="60" y="92" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="15" font-weight="400" fill="#5b6675" text-anchor="start">Everything that comes from the network is data. Nothing in HiveCrawl runs programs on your machine.</text>
+<rect x="60" y="120" width="1010" height="720" rx="24" fill="#ffffff" stroke="#d5dce5" stroke-width="1.3"/>
+<text x="90" y="158" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="12" font-weight="700" fill="#5b6675" text-anchor="start">YOUR MACHINE</text>
+<text x="90" y="182" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">Docker Compose · port bound to 127.0.0.1 only · home nodes publish no port at all</text>
+<rect x="100" y="214" width="430" height="190" rx="14" fill="#ffffff" stroke="#cdd4de" stroke-width="1.3"/>
+<text x="118" y="246" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="18" font-weight="650" fill="#1f2a37" text-anchor="start">Headless Chrome</text>
+<text x="122" y="274" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="14" font-weight="400" fill="#1f2a37" text-anchor="start">✓ own network: only the node can reach it</text>
+<text x="122" y="306" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="14" font-weight="400" fill="#1f2a37" text-anchor="start">✓ runs as nobody, read-only, no capabilities</text>
+<text x="122" y="338" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="14" font-weight="400" fill="#1f2a37" text-anchor="start">✓ every request a page makes is checked</text>
+<rect x="100" y="430" width="205" height="130" rx="14" fill="#ffffff" stroke="#cdd4de" stroke-width="1.3"/>
+<text x="118" y="462" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="17" font-weight="650" fill="#1f2a37" text-anchor="start">WARP proxy</text>
+<text x="118" y="486.0" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">SOCKS5, inside the</text>
+<text x="118" y="505.575" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">compose network only</text>
+<rect x="325" y="430" width="205" height="130" rx="14" fill="#ffffff" stroke="#cdd4de" stroke-width="1.3"/>
+<text x="343" y="462" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="17" font-weight="650" fill="#1f2a37" text-anchor="start">SearXNG</text>
+<text x="343" y="486.0" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">queries the engines</text>
+<text x="343" y="505.575" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">no published port</text>
+<path d="M325,495 L311,495" fill="none" stroke="#5b6675" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#a5b6675)"/>
+<rect x="590" y="214" width="440" height="346" rx="14" fill="#fef3d9" stroke="#f5c66b" stroke-width="1.3"/>
+<text x="608" y="246" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="19" font-weight="650" fill="#1f2a37" text-anchor="start">hivecrawl</text>
+<text x="612" y="278" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="14.5" font-weight="400" fill="#1f2a37" text-anchor="start">✓ non-root user, read-only filesystem</text>
+<text x="612" y="314" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="14.5" font-weight="400" fill="#1f2a37" text-anchor="start">✓ all Linux capabilities dropped</text>
+<text x="612" y="350" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="14.5" font-weight="400" fill="#1f2a37" text-anchor="start">✓ no shell in the image (distroless)</text>
+<text x="612" y="386" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="14.5" font-weight="400" fill="#1f2a37" text-anchor="start">✓ never executes programs, no plugins</text>
+<text x="612" y="422" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="14.5" font-weight="400" fill="#1f2a37" text-anchor="start">✓ API key required for UI, API, MCP</text>
+<text x="612" y="458" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="14.5" font-weight="400" fill="#1f2a37" text-anchor="start">✓ secrets in owner-only files (/data)</text>
+<text x="612" y="494" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="14.5" font-weight="400" fill="#1f2a37" text-anchor="start">✓ every outgoing address is checked</text>
+<path d="M590,300 L536,300" fill="none" stroke="#5b6675" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#a5b6675)"/>
+<path d="M590,495 L536,495" fill="none" stroke="#5b6675" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#a5b6675)"/>
+<rect x="100" y="600" width="930" height="210" rx="16" fill="#fdeee6" stroke="#f6cdb8" stroke-width="1.3"/>
+<text x="124" y="636" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="15" font-weight="700" fill="#c2410c" text-anchor="start">Refused on every route — direct, WARP, browser, peer fetch — checked at connect time:</text>
+<text x="124" y="670" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="14" font-weight="400" fill="#1f2a37" text-anchor="start">• localhost, 127.0.0.0/8 and this machine</text>
+<text x="124" y="696" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="14" font-weight="400" fill="#1f2a37" text-anchor="start">• your LAN: 10/8, 172.16/12, 192.168/16 · link-local · CGNAT 100.64/10</text>
+<text x="124" y="722" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="14" font-weight="400" fill="#1f2a37" text-anchor="start">• cloud metadata 169.254.169.254 · IPv6 private ranges</text>
+<text x="124" y="748" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="14" font-weight="400" fill="#1f2a37" text-anchor="start">• redirects and DNS rebinding into any of these</text>
+<text x="124" y="790" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="14" font-weight="400" fill="#5b6675" text-anchor="start" font-style="italic">So a scraped page, a crawl or a peer can never reach your router, NAS, other containers or this machine.</text>
+<text x="1180" y="158" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="12" font-weight="700" fill="#5b6675" text-anchor="start">OUTSIDE</text>
+<rect x="1180" y="190" width="360" height="130" rx="14" fill="#ffffff" stroke="#cdd4de" stroke-width="1.3"/>
+<text x="1198" y="222" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="17" font-weight="650" fill="#1f2a37" text-anchor="start">You</text>
+<text x="1198" y="246.0" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">browser, SDKs and MCP clients</text>
+<text x="1198" y="265.575" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">with this node&#x27;s API key</text>
+<path d="M1180,262 L1036,262" fill="none" stroke="#e2900c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#ae2900c)"/>
+<rect x="1062" y="235" width="91" height="22" rx="6" fill="#f5f6f8"/>
+<text x="1108" y="250" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="12.5" font-weight="600" fill="#e2900c" text-anchor="middle">full access</text>
+<rect x="1180" y="350" width="360" height="260" rx="14" fill="#e0f5f3" stroke="#a9e0da" stroke-width="1.3"/>
+<text x="1198" y="382" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="17" font-weight="650" fill="#1f2a37" text-anchor="start">Other nodes in your network</text>
+<text x="1202" y="410" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="14" font-weight="400" fill="#1f2a37" text-anchor="start">may send, signed with node + network key:</text>
+<text x="1202" y="435" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="14" font-weight="400" fill="#1f2a37" text-anchor="start">• a search — answered as data</text>
+<text x="1202" y="460" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="14" font-weight="400" fill="#1f2a37" text-anchor="start">• a probe search</text>
+<text x="1202" y="485" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="14" font-weight="400" fill="#1f2a37" text-anchor="start">• a page fetch, only if you set</text>
+<text x="1202" y="510" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="14" font-weight="400" fill="#1f2a37" text-anchor="start">   HC_SERVE_SCRAPES=true</text>
+<text x="1202" y="535" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="14" font-weight="400" fill="#1f2a37" text-anchor="start">cannot use your AI, settings, crawls,</text>
+<text x="1202" y="560" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="14" font-weight="400" fill="#1f2a37" text-anchor="start">jobs or files, or run anything</text>
+<path d="M1180,470 L1036,470" fill="none" stroke="#12897f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#a12897f)"/>
+<rect x="1070" y="443" width="77" height="22" rx="6" fill="#f5f6f8"/>
+<text x="1108" y="458" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="12.5" font-weight="600" fill="#12897f" text-anchor="middle">data only</text>
+<rect x="1180" y="640" width="360" height="170" rx="14" fill="#eef1f5" stroke="#cdd4de" stroke-width="1.3"/>
+<text x="1198" y="672" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="17" font-weight="650" fill="#1f2a37" text-anchor="start">Everyone else</text>
+<text x="1198" y="696.0" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">401 without the key</text>
+<text x="1198" y="715.575" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">unsigned mesh requests dropped</text>
+<path d="M1180,725 L1080,725" fill="none" stroke="#c2410c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#ac2410c)"/>
+<rect x="1096" y="697" width="63" height="22" rx="6" fill="#f5f6f8"/>
+<text x="1128" y="712" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="12.5" font-weight="600" fill="#c2410c" text-anchor="middle">blocked</text>
+</svg>

@@ -1,0 +1,1177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HiveCrawl</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+:root {
+  /* Flat, light-first theme: solid surfaces, 1px borders, no shadows or
+     glows; dark mode is a soft slate, not black. */
+  --bg: #f5f6f8; --surface: #ffffff; --surface-2: #eef1f5; --text: #1f2a37; --muted: #5b6675; --faint: #8a94a3;
+  --border: #e2e6ec; --border-strong: #cdd4de;
+  --accent: #f5a524; --accent-strong: #e2900c; --accent-soft: #fef3d9; --accent-text: #1f2a37;
+  --teal: #14a39a; --teal-soft: #e0f5f3;
+  --link: #2563eb; --ok: #15803d; --ok-soft: #e4f5ea; --warn: #c2410c; --warn-soft: #fdeee6; --info-soft: #e8effd; --info: #2563eb;
+  --code-bg: #1f2937; --code-text: #e5e9f0; --shadow: none;
+  --radius: 12px;
+  --sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1b2230; --surface: #232b3a; --surface-2: #2b3546; --text: #e8ecf2; --muted: #a6b0bf; --faint: #7c8798;
+    --border: #344055; --border-strong: #46536b;
+    --accent: #f7b23b; --accent-strong: #ffc45e; --accent-soft: #3b3222; --accent-text: #1b2230;
+    --teal: #3cc7bc; --teal-soft: #1d3a3c;
+    --link: #82aaff; --ok: #5bd28a; --ok-soft: #1f3a2d; --warn: #fb9a5b; --warn-soft: #3d2b22; --info-soft: #24324f; --info: #82aaff;
+    --code-bg: #161d29; --code-text: #e5e9f0; --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1b2230; --surface: #232b3a; --surface-2: #2b3546; --text: #e8ecf2; --muted: #a6b0bf; --faint: #7c8798;
+  --border: #344055; --border-strong: #46536b;
+  --accent: #f7b23b; --accent-strong: #ffc45e; --accent-soft: #3b3222; --accent-text: #1b2230;
+  --teal: #3cc7bc; --teal-soft: #1d3a3c;
+  --link: #82aaff; --ok: #5bd28a; --ok-soft: #1f3a2d; --warn: #fb9a5b; --warn-soft: #3d2b22; --info-soft: #24324f; --info: #82aaff;
+  --code-bg: #161d29; --code-text: #e5e9f0; --shadow: none;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--text); font: 14.5px/1.55 var(--sans); -webkit-font-smoothing: antialiased; }
+a { color: var(--link); }
+button { font: inherit; color: inherit; }
+input, select, textarea { font: inherit; color: var(--text); }
+
+/* ---------- top bar ---------- */
+.topbar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 16px; padding: 0 20px; height: 56px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.brand { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 16px; letter-spacing: -.01em; white-space: nowrap; }
+.brand svg { width: 24px; height: 24px; flex: none; }
+.tabs { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab { display: flex; align-items: center; gap: 7px; padding: 7px 12px; border: 0; border-radius: 8px; background: none; color: var(--muted); cursor: pointer; white-space: nowrap; }
+.tab svg { width: 16px; height: 16px; }
+.tab:hover { color: var(--text); background: var(--surface-2); }
+.tab.active { color: var(--text); background: var(--accent-soft); font-weight: 600; box-shadow: inset 0 -2px 0 var(--accent); border-radius: 8px 8px 4px 4px; }
+.top-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.node-pill { display: flex; align-items: center; gap: 7px; padding: 4px 10px; border: 1px solid var(--border); border-radius: 99px; font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); flex: none; }
+.dot.bad { background: var(--warn); }
+.dot.idle { background: var(--faint); }
+.icon-btn { display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); cursor: pointer; color: var(--muted); }
+.icon-btn:hover { color: var(--text); border-color: var(--border-strong); }
+.icon-btn svg { width: 16px; height: 16px; }
+
+/* ---------- layout ---------- */
+main { max-width: 1240px; margin: 0 auto; padding: 28px 20px 80px; }
+.view { display: none; }
+.view.active { display: block; }
+.hero { margin: 0 0 18px; }
+.hero h1 { margin: 0 0 4px; font-size: 22px; letter-spacing: -.02em; }
+.hero p { margin: 0; color: var(--muted); }
+.grid-2 { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 20px; align-items: start; }
+@media (max-width: 1000px) { .grid-2 { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.panel-pad { padding: 18px; }
+.sticky { position: sticky; top: 76px; }
+@media (max-width: 1000px) { .sticky { position: static; } }
+
+/* ---------- query bar ---------- */
+.querybar { display: flex; gap: 8px; padding: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.querybar:focus-within { border-color: var(--accent); outline: 2px solid var(--accent-soft); }
+.querybar .lead { display: grid; place-items: center; width: 34px; color: var(--faint); flex: none; }
+.querybar .lead svg { width: 18px; height: 18px; }
+.querybar input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font-size: 16px; padding: 8px 2px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 38px; padding: 0 16px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); cursor: pointer; white-space: nowrap; }
+.btn:hover { border-color: var(--border-strong); }
+.btn svg { width: 15px; height: 15px; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
+.btn.primary:hover { background: var(--accent-strong); border-color: var(--accent-strong); }
+.btn.small { height: 30px; padding: 0 10px; font-size: 13px; border-radius: 7px; }
+.btn[disabled] { opacity: .6; cursor: progress; }
+
+/* ---------- options ---------- */
+.options { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; margin: 12px 4px 0; color: var(--muted); font-size: 13px; }
+.field { display: flex; align-items: center; gap: 7px; }
+.field select, .field input[type=text] { height: 30px; padding: 0 8px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); font-size: 13px; }
+.field input[type=text] { width: 190px; }
+.toggle { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
+.toggle input { display: none; }
+.toggle .sw { position: relative; width: 30px; height: 18px; border-radius: 99px; background: var(--border-strong); transition: background .15s; flex: none; }
+.toggle .sw::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: transform .15s; }
+.toggle input:checked + .sw { background: var(--accent); }
+.toggle input:checked + .sw::after { transform: translateX(12px); }
+.chips-select { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.chip-opt { padding: 3px 10px; border: 1px solid var(--border); border-radius: 99px; cursor: pointer; font-size: 12.5px; user-select: none; }
+.chip-opt input { display: none; }
+.chip-opt:has(input:checked) { background: var(--accent-soft); border-color: var(--accent); color: var(--text); }
+
+/* ---------- result meta ---------- */
+.meta { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; margin: 18px 4px 10px; color: var(--muted); font-size: 13px; min-height: 22px; }
+.badge { display: inline-flex; align-items: center; gap: 5px; padding: 1px 9px; border-radius: 99px; font-size: 12px; font-weight: 600; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+.badge.local { background: var(--accent-soft); color: var(--text); }
+.badge.peer { background: var(--teal-soft); color: var(--teal); }
+.badge.warp { background: var(--info-soft); color: var(--info); }
+.badge.cache { background: var(--surface-2); color: var(--text); }
+.badge.bad { background: var(--warn-soft); color: var(--warn); }
+.tag { display: inline-block; padding: 0 7px; border-radius: 5px; background: var(--surface-2); color: var(--muted); font-size: 12px; font-family: var(--mono); }
+.warning { margin: 0 4px 12px; padding: 8px 12px; border-radius: 9px; background: var(--warn-soft); color: var(--warn); font-size: 13px; }
+
+/* ---------- results ---------- */
+.results { display: flex; flex-direction: column; gap: 10px; }
+.result { padding: 14px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+.result:hover { border-color: var(--accent); }
+.r-top { display: flex; gap: 12px; align-items: flex-start; }
+.favicon { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: var(--accent-soft); color: var(--accent-strong); font-weight: 700; font-size: 12px; text-transform: uppercase; flex: none; margin-top: 2px; }
+.r-body { flex: 1; min-width: 0; }
+.r-host { color: var(--muted); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.r-title { display: block; margin: 1px 0 3px; font-size: 16px; font-weight: 600; color: var(--link); text-decoration: none; overflow-wrap: anywhere; }
+.r-title:hover { text-decoration: underline; }
+.r-desc { margin: 0; color: var(--text); overflow-wrap: anywhere; }
+.r-actions { display: flex; gap: 6px; flex: none; }
+.r-pos { color: var(--faint); font-size: 12px; font-variant-numeric: tabular-nums; width: 22px; text-align: right; padding-top: 6px; flex: none; }
+details.content { margin-top: 10px; border-top: 1px dashed var(--border); padding-top: 8px; }
+details.content summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+.empty { padding: 56px 20px; text-align: center; color: var(--muted); }
+.empty svg { width: 40px; height: 40px; color: var(--faint); margin-bottom: 8px; }
+.err { padding: 14px 16px; border-radius: 12px; background: var(--warn-soft); color: var(--warn); }
+.skeleton { height: 86px; border-radius: var(--radius); background: var(--surface-2); animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .55; } }
+
+/* ---------- output viewer ---------- */
+.viewer { overflow: hidden; }
+.viewer-head { display: flex; align-items: center; gap: 4px; padding: 8px 10px; border-bottom: 1px solid var(--border); overflow-x: auto; }
+.seg { padding: 5px 11px; border: 0; border-radius: 7px; background: none; color: var(--muted); cursor: pointer; font-size: 13px; white-space: nowrap; }
+.seg.active { background: var(--surface-2); color: var(--text); font-weight: 600; }
+.viewer-head .spacer { flex: 1; }
+.viewer-body { max-height: 70vh; overflow: auto; }
+.prose { padding: 18px 22px; overflow-wrap: anywhere; }
+.prose img { max-width: 100%; height: auto; border-radius: 6px; }
+.prose pre { overflow-x: auto; padding: 12px; border-radius: 8px; background: var(--surface-2); }
+.prose code { font-family: var(--mono); font-size: 13px; }
+.prose table { border-collapse: collapse; display: block; overflow-x: auto; }
+.prose th, .prose td { border: 1px solid var(--border); padding: 5px 9px; }
+.prose blockquote { margin: 0; padding-left: 14px; border-left: 3px solid var(--border-strong); color: var(--muted); }
+pre.raw { margin: 0; padding: 16px 18px; font: 12.5px/1.6 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.linklist { margin: 0; padding: 12px 18px 16px 36px; font-size: 13px; }
+.linklist li { margin: 3px 0; overflow-wrap: anywhere; }
+.doc-meta { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; padding: 14px 18px; border-bottom: 1px solid var(--border); font-size: 13px; }
+.doc-meta dt { color: var(--muted); }
+.doc-meta dd { margin: 0; overflow-wrap: anywhere; }
+
+/* ---------- code panel ---------- */
+.code-panel { overflow: hidden; }
+.code-panel .viewer-head { background: var(--surface); }
+.code { margin: 0; padding: 16px; background: var(--code-bg); color: var(--code-text); font: 12.5px/1.65 var(--mono); white-space: pre; overflow-x: auto; max-height: 420px; }
+.code .k { color: #f7b23b; } .code .s { color: #7dd3c0; } .code .c { color: #8b97a8; }
+.side-note { padding: 12px 16px; border-top: 1px solid var(--border); color: var(--muted); font-size: 12.5px; }
+
+/* ---------- network page styles ---------- */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 18px; }
+.stat { padding: 14px 16px; background: var(--surface); border: 1px solid var(--border); border-top: 3px solid var(--accent); border-radius: var(--radius); }
+.stat .k { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
+.stat .v { margin-top: 3px; font-size: 22px; color: var(--text); font-weight: 650; letter-spacing: -.01em; overflow-wrap: anywhere; }
+.stat .s { color: var(--muted); font-size: 12.5px; overflow-wrap: anywhere; }
+h2 { margin: 26px 0 10px; font-size: 15px; }
+.table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+table.t { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+table.t th, table.t td { padding: 10px 14px; border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; }
+table.t th { color: var(--muted); font-weight: 500; font-size: 12px; background: var(--surface-2); }
+table.t tr:last-child td { border-bottom: 0; }
+table.t td.num { font-variant-numeric: tabular-nums; }
+.engines { display: flex; flex-wrap: wrap; gap: 8px; }
+.engine { display: flex; align-items: center; gap: 8px; padding: 7px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; font-size: 13px; }
+.engine .why { color: var(--muted); font-size: 12px; }
+.bar { position: relative; width: 70px; height: 6px; border-radius: 99px; background: var(--surface-2); overflow: hidden; display: inline-block; vertical-align: middle; margin-right: 6px; }
+.bar i { position: absolute; inset: 0 auto 0 0; background: var(--ok); border-radius: 99px; }
+
+/* ---------- connect ---------- */
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; }
+@media (max-width: 420px) { .cards { grid-template-columns: minmax(0, 1fr); } }
+.card h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 4px; font-size: 15px; }
+.card h3 svg { width: 18px; height: 18px; color: var(--accent); }
+.card p { margin: 0 0 12px; color: var(--muted); font-size: 13px; }
+.card .code { border-radius: 9px; max-height: none; }
+.copy-wrap { position: relative; }
+/* Narrow cards: wrap long commands and keep the Copy button off the text. */
+.card .copy-wrap pre.code { white-space: pre-wrap; overflow-wrap: anywhere; padding-top: 46px; }
+.copy-wrap .btn { position: absolute; top: 8px; right: 8px; background: color-mix(in srgb, var(--code-bg) 70%, #fff 8%); border-color: transparent; color: var(--code-text); }
+.kv { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+.kv input { flex: 1; min-width: 0; height: 36px; padding: 0 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); font-family: var(--mono); font-size: 13px; }
+
+/* ---------- key modal ---------- */
+.lock { position: fixed; inset: 0; z-index: 60; display: none; overflow: auto; padding: 48px 16px; background: var(--bg); }
+body.locked .lock { display: block; }
+body.locked > header, body.locked > main { visibility: hidden; }
+.lock-card { width: min(560px, 100%); margin: 0 auto; padding: 28px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; }
+.lock-card h2 { margin: 10px 0 4px; font-size: 22px; letter-spacing: -.01em; }
+.lock-card > p { margin: 0 0 18px; color: var(--muted); font-size: 14px; }
+.lock-step { display: flex; gap: 12px; margin: 0 0 16px; }
+.lock-step .n { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--accent-soft, var(--surface-2)); color: var(--accent); font-weight: 700; font-size: 13px; }
+.lock-step .b { flex: 1; min-width: 0; font-size: 14px; }
+.lock-step .b small { display: block; color: var(--muted); margin-top: 4px; font-size: 12.5px; }
+.cmd { display: flex; align-items: center; gap: 8px; margin-top: 6px; padding: 9px 10px 9px 12px; background: var(--code-bg); color: var(--code-text); border-radius: 9px; font: 12.5px var(--mono); }
+.cmd code { flex: 1; overflow-x: auto; white-space: nowrap; }
+.cmd .btn { background: color-mix(in srgb, var(--code-bg) 80%, #fff 12%); color: var(--code-text); border-color: transparent; }
+.lock form { display: flex; gap: 8px; margin-top: 6px; }
+.lock input { flex: 1; min-width: 0; height: 40px; padding: 0 12px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-2); font-family: var(--mono); }
+.lock .err { margin-top: 10px; }
+.lock details { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); color: var(--muted); font-size: 13px; }
+.lock details summary { cursor: pointer; color: var(--text); }
+.modal-bg { position: fixed; inset: 0; z-index: 50; display: none; place-items: center; padding: 16px; background: rgba(31,42,55,.35); }
+.modal-bg.open { display: grid; }
+.modal { width: min(440px, 100%); padding: 22px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; }
+.modal h3 { margin: 0 0 4px; font-size: 17px; }
+.modal p { margin: 0 0 14px; color: var(--muted); font-size: 13.5px; }
+.modal input { width: 100%; height: 40px; padding: 0 12px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-2); font-family: var(--mono); }
+.modal .row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+.toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%) translateY(20px); opacity: 0; transition: all .2s; z-index: 60; padding: 8px 14px; border-radius: 9px; background: var(--text); color: var(--bg); font-size: 13px; pointer-events: none; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+/* ---------- new pieces ---------- */
+.seg-group { display: inline-flex; gap: 2px; padding: 3px; margin: 0 0 12px; background: var(--surface-2); border-radius: 10px; }
+.seg-group .seg { padding: 6px 14px; }
+.seg-group .seg.active { background: var(--surface); outline: 1px solid var(--border); }
+.img-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+.img-card { display: block; overflow: hidden; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; text-decoration: none; color: var(--text); }
+.img-card img { display: block; width: 100%; height: 130px; object-fit: cover; background: var(--surface-2); }
+.img-card div { padding: 7px 9px; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.img-card small { display: block; color: var(--muted); }
+.news-date { display: inline-block; margin-left: 6px; color: var(--muted); font-size: 12.5px; }
+.news-thumb { width: 84px; height: 60px; object-fit: cover; border-radius: 8px; flex: none; background: var(--surface-2); }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px 14px; margin-top: 12px; }
+.form-grid label { display: flex; flex-direction: column; gap: 5px; color: var(--muted); font-size: 12.5px; }
+.form-grid input, .form-grid textarea, .form-grid select, textarea.big { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); font-size: 13.5px; color: var(--text); }
+textarea.big, .form-grid textarea { font-family: var(--mono); font-size: 12.5px; resize: vertical; min-height: 64px; }
+.progress { height: 8px; border-radius: 99px; background: var(--surface-2); overflow: hidden; margin: 10px 0 4px; }
+.progress i { display: block; height: 100%; background: var(--accent); border-radius: 99px; transition: width .3s; }
+.page-list { display: flex; flex-direction: column; gap: 6px; }
+.page-row { display: flex; gap: 10px; align-items: center; padding: 9px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; }
+.page-row:hover, .page-row.active { border-color: var(--accent); }
+.page-row .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.page-row .u { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.notice { padding: 12px 14px; border-radius: 10px; background: var(--info-soft); color: var(--info); font-size: 13.5px; margin-bottom: 14px; }
+.shot { display: block; max-width: 100%; margin: 14px auto; border: 1px solid var(--border); border-radius: 8px; }
+.ai-box { padding: 14px 18px; border-bottom: 1px solid var(--border); }
+.ai-box h4 { margin: 0 0 6px; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+@media (max-width: 640px) {
+  .topbar { padding: 0 12px; gap: 10px; }
+  .brand span, .node-pill .label { display: none; }
+  main { padding: 18px 16px 64px; }
+  .field input[type=text] { width: 150px; }
+  .r-actions .btn span { display: none; }
+}
+</style>
+</head>
+<body class="locked">
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+  <symbol id="i-doc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></symbol>
+  <symbol id="i-net" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="5" r="2.5"/><circle cx="5" cy="18" r="2.5"/><circle cx="19" cy="18" r="2.5"/><path d="M10.8 7.2 6.2 15.8M13.2 7.2l4.6 8.6M7.5 18h9"/></symbol>
+  <symbol id="i-plug" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7V3M15 7V3M6 7h12v4a6 6 0 0 1-12 0zM12 17v4"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="m10.8 12.2 9.2-9.2M17 6l3 3M14 9l2 2"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-bot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 4v4M9 14h.01M15 14h.01"/></symbol>
+  <symbol id="i-map" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></symbol>
+  <symbol id="i-crawl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+  <symbol id="i-code" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m8 7-5 5 5 5M16 7l5 5-5 5"/></symbol>
+</svg>
+
+<header class="topbar">
+  <div class="brand">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2.5l11.7 6.75v13.5L16 29.5 4.3 22.75V9.25z" fill="var(--accent)"/><path d="M10 19.5l6-7 6 7" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="10" cy="19.5" r="2.3" fill="#fff"/><circle cx="16" cy="12.5" r="2.3" fill="#fff"/><circle cx="22" cy="19.5" r="2.3" fill="#fff"/></svg>
+    <span>HiveCrawl</span>
+  </div>
+  <nav class="tabs" role="tablist">
+    <button class="tab active" data-view="search"><svg><use href="#i-search"/></svg>Search</button>
+    <button class="tab" data-view="scrape"><svg><use href="#i-doc"/></svg>Scrape</button>
+    <button class="tab" data-view="map"><svg><use href="#i-map"/></svg>Map</button>
+    <button class="tab" data-view="crawl"><svg><use href="#i-crawl"/></svg>Crawl</button>
+    <button class="tab" data-view="ai"><svg><use href="#i-spark"/></svg>AI</button>
+    <button class="tab" data-view="network"><svg><use href="#i-net"/></svg>Network</button>
+    <button class="tab" data-view="settings"><svg><use href="#i-gear"/></svg>Settings</button>
+    <button class="tab" data-view="connect"><svg><use href="#i-plug"/></svg>Connect</button>
+  </nav>
+  <div class="top-right">
+    <div class="node-pill" id="nodePill"><span class="dot idle"></span><span class="label" id="nodeLabel">connecting…</span></div>
+    <button class="icon-btn" id="keyBtn" title="API key"><svg><use href="#i-key"/></svg></button>
+    <button class="icon-btn" id="themeBtn" title="Toggle theme"><svg><use href="#i-sun"/></svg></button>
+  </div>
+</header>
+
+<main>
+  <!-- ===================== SEARCH ===================== -->
+  <section class="view active" id="view-search">
+    <div class="hero"><h1>Search the hive</h1><p>Firecrawl-compatible search. Blocked engines are retried through WARP and peer nodes, then merged.</p></div>
+    <div class="grid-2">
+      <div>
+        <div class="seg-group" id="srcSeg"><button type="button" class="seg active" data-src="web">Web</button><button type="button" class="seg" data-src="news">News</button><button type="button" class="seg" data-src="images">Images</button></div>
+        <form class="querybar" id="searchForm">
+          <span class="lead"><svg><use href="#i-search"/></svg></span>
+          <input id="q" type="search" placeholder="Search anything…" autocomplete="off" autofocus>
+          <button class="btn primary" type="submit" id="searchBtn">Search <svg><use href="#i-arrow"/></svg></button>
+        </form>
+        <div class="options">
+          <label class="field">Results <select id="limit"><option>5</option><option selected>10</option><option>20</option><option>50</option></select></label>
+          <label class="field">Time <select id="tbs"><option value="">Any time</option><option value="qdr:d">Past day</option><option value="qdr:w">Past week</option><option value="qdr:m">Past month</option><option value="qdr:y">Past year</option></select></label>
+          <label class="field">Sites <input type="text" id="domains" placeholder="e.g. wikipedia.org"></label>
+          <label class="toggle"><input type="checkbox" id="withContent"><span class="sw"></span>Page content</label>
+          <label class="toggle"><input type="checkbox" id="localOnly"><span class="sw"></span>This node only</label>
+        </div>
+        <div class="meta" id="searchMeta"></div>
+        <div id="searchWarn"></div>
+        <div class="results" id="results">
+          <div class="empty"><svg><use href="#i-search"/></svg><div>Results appear here. Try <a href="#" data-try="kerala monsoon forecast">kerala monsoon forecast</a> or <a href="#" data-try="go generics tutorial">go generics tutorial</a>.</div></div>
+        </div>
+      </div>
+      <aside class="panel code-panel sticky" id="searchCode"></aside>
+    </div>
+  </section>
+
+  <!-- ===================== SCRAPE ===================== -->
+  <section class="view" id="view-scrape">
+    <div class="hero"><h1>Scrape a page</h1><p>Turn any page into clean, LLM-ready markdown — same format as Firecrawl's <code>/v2/scrape</code>.</p></div>
+    <div class="grid-2">
+      <div>
+        <form class="querybar" id="scrapeForm">
+          <span class="lead"><svg><use href="#i-doc"/></svg></span>
+          <input id="url" type="url" placeholder="https://example.com/article" autocomplete="off">
+          <button class="btn primary" type="submit" id="scrapeBtn">Scrape <svg><use href="#i-arrow"/></svg></button>
+        </form>
+        <div class="options">
+          <span class="chips-select" id="formats">
+            <label class="chip-opt"><input type="checkbox" value="markdown" checked>markdown</label>
+            <label class="chip-opt"><input type="checkbox" value="html">html</label>
+            <label class="chip-opt"><input type="checkbox" value="links">links</label>
+            <label class="chip-opt"><input type="checkbox" value="rawHtml">rawHtml</label>
+            <label class="chip-opt"><input type="checkbox" value="screenshot">screenshot</label>
+            <label class="chip-opt"><input type="checkbox" value="summary">AI summary</label>
+          </span>
+          <label class="toggle"><input type="checkbox" id="mobile"><span class="sw"></span>Mobile</label>
+          <label class="field">Wait <select id="waitFor"><option value="0">no browser</option><option value="1000">1 s</option><option value="3000">3 s</option><option value="6000">6 s</option></select></label>
+          <label class="field">AI extract <input type="text" id="jsonPrompt" placeholder="e.g. price and stock status"></label>
+          <label class="toggle"><input type="checkbox" id="mainOnly" checked><span class="sw"></span>Main content only</label>
+          <label class="field">Include <input type="text" id="includeTags" placeholder="article, .post"></label>
+          <label class="field">Exclude <input type="text" id="excludeTags" placeholder=".comments"></label>
+        </div>
+        <div class="meta" id="scrapeMeta"></div>
+        <div id="scrapeOut"><div class="panel empty"><svg><use href="#i-doc"/></svg><div>Paste a URL to see its markdown, HTML, links and metadata.</div></div></div>
+      </div>
+      <aside class="panel code-panel sticky" id="scrapeCode"></aside>
+    </div>
+  </section>
+
+  <!-- ===================== MAP ===================== -->
+  <section class="view" id="view-map">
+    <div class="hero"><h1>Map a site</h1><p>List a website's URLs from its sitemaps, its links and a site search — fast, nothing is scraped.</p></div>
+    <div class="grid-2">
+      <div>
+        <form class="querybar" id="mapForm">
+          <span class="lead"><svg><use href="#i-map"/></svg></span>
+          <input id="mapUrl" type="url" placeholder="https://example.com" autocomplete="off">
+          <button class="btn primary" type="submit" id="mapBtn">Map <svg><use href="#i-arrow"/></svg></button>
+        </form>
+        <div class="options">
+          <label class="field">Search <input type="text" id="mapSearch" placeholder="rank pages about…"></label>
+          <label class="field">Limit <select id="mapLimit"><option>50</option><option selected>200</option><option>1000</option><option>5000</option></select></label>
+        </div>
+        <div class="meta" id="mapMeta"></div>
+        <div class="page-list" id="mapOut"><div class="panel empty"><svg><use href="#i-map"/></svg><div>Enter a site to see its pages.</div></div></div>
+      </div>
+      <aside class="panel code-panel sticky" id="mapCode"></aside>
+    </div>
+  </section>
+
+  <!-- ===================== CRAWL ===================== -->
+  <section class="view" id="view-crawl">
+    <div class="hero"><h1>Crawl a site</h1><p>Scrape every page below a URL in the background, following links and sitemaps and respecting robots.txt.</p></div>
+    <div class="grid-2">
+      <div>
+        <form class="querybar" id="crawlForm">
+          <span class="lead"><svg><use href="#i-crawl"/></svg></span>
+          <input id="crawlUrl" type="url" placeholder="https://docs.example.com/guide/" autocomplete="off">
+          <button class="btn primary" type="submit" id="crawlBtn">Start crawl <svg><use href="#i-arrow"/></svg></button>
+        </form>
+        <div class="options">
+          <label class="field">Pages <select id="crawlLimit"><option>10</option><option selected>25</option><option>100</option><option>500</option></select></label>
+          <label class="field">Depth <select id="crawlDepth"><option value="">any</option><option>1</option><option>2</option><option>3</option></select></label>
+          <label class="field">Include <input type="text" id="crawlInclude" placeholder="regex, e.g. ^/docs/"></label>
+          <label class="field">Exclude <input type="text" id="crawlExclude" placeholder="regex, e.g. /blog/"></label>
+          <label class="toggle"><input type="checkbox" id="crawlEntire"><span class="sw"></span>Whole domain</label>
+        </div>
+        <div id="crawlStatus"></div>
+        <div class="grid-2" style="grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);margin-top:12px" id="crawlBody">
+          <div class="page-list" id="crawlPages"></div>
+          <div id="crawlDoc"></div>
+        </div>
+      </div>
+      <aside class="panel code-panel sticky" id="crawlCode"></aside>
+    </div>
+  </section>
+
+  <!-- ===================== AI ===================== -->
+  <section class="view" id="view-ai">
+    <div class="hero"><h1>AI extract &amp; research</h1><p>Turn pages into structured JSON, or let an agent search and read the web to answer a question. Uses this node's LLM only.</p></div>
+    <div id="aiNotice"></div>
+    <div class="grid-2">
+      <div>
+        <div class="seg-group" id="aiSeg"><button type="button" class="seg active" data-ai="extract">Extract</button><button type="button" class="seg" data-ai="agent">Agent</button></div>
+        <form class="panel panel-pad" id="aiForm">
+          <label class="field" style="flex-direction:column;align-items:stretch;gap:6px;color:var(--muted);font-size:12.5px">Prompt
+            <textarea class="big" id="aiPrompt" rows="3" placeholder="Extract the plan names and monthly prices"></textarea></label>
+          <div class="form-grid">
+            <label>URLs (one per line; site.com/* reads a whole site)<textarea id="aiUrls" rows="3" placeholder="https://example.com/pricing"></textarea></label>
+            <label id="aiSchemaWrap">JSON schema (optional)<textarea id="aiSchema" rows="3" placeholder='{"type":"object","properties":{"plans":{"type":"array"}}}'></textarea></label>
+          </div>
+          <div class="options" style="margin:12px 0 0">
+            <label class="toggle" id="aiWebWrap"><input type="checkbox" id="aiWeb"><span class="sw"></span>Also search the web</label>
+            <span style="flex:1"></span>
+            <button class="btn primary" type="submit" id="aiBtn">Run <svg><use href="#i-arrow"/></svg></button>
+          </div>
+        </form>
+        <div class="meta" id="aiMeta"></div>
+        <div id="aiOut"></div>
+      </div>
+      <aside class="panel code-panel sticky" id="aiCode"></aside>
+    </div>
+  </section>
+
+  <!-- ===================== SETTINGS ===================== -->
+  <section class="view" id="view-settings">
+    <div class="hero"><h1>Settings</h1><p>Configure this node. Changes apply immediately and are saved on this node only.</p></div>
+    <div class="panel panel-pad" style="max-width:760px;margin-bottom:16px">
+      <h3 style="margin:0 0 4px;font-size:16px">Node access (API key)</h3>
+      <p style="margin:0 0 12px;color:var(--muted);font-size:13.5px">Decides <b>who can use this node</b>: the web UI, the Firecrawl SDKs and MCP all need it. Peers in the network never use it — they connect with the network key. Anyone with this key can run searches and use your AI credits, so share it only with your own devices and apps.</p>
+      <div id="accessState" class="meta" style="margin:0 0 12px"></div>
+      <div class="options" style="margin:0">
+        <button class="btn" type="button" id="copyLink">Copy sign-in link</button>
+        <button class="btn" type="button" id="copyKey">Copy API key</button>
+        <span style="flex:1"></span>
+        <button class="btn" type="button" id="signOut">Sign out of this browser</button>
+      </div>
+      <p style="margin:12px 0 0;color:var(--muted);font-size:12.5px">To change the key, set <code>HC_API_KEYS</code> in the node's <code>.env</code> and run <code>docker compose up -d</code>.</p>
+    </div>
+    <div class="panel panel-pad" style="max-width:760px">
+      <h3 style="margin:0 0 4px;font-size:16px">AI model (LLM)</h3>
+      <p style="margin:0 0 14px;color:var(--muted);font-size:13.5px">This is a different key: your account with an AI provider. It stays on this node and is never shown again after saving. Used for Extract, Agent and the AI scrape formats — only for requests made with this node's API key, never for other nodes in the network. Works with Anthropic (Claude) and any OpenAI-compatible API.</p>
+      <div id="llmState" class="meta" style="margin:0 0 12px"></div>
+      <div class="form-grid">
+        <label>Provider<select id="llmProvider">
+          <option value="openai">OpenAI</option><option value="anthropic">Anthropic (Claude)</option><option value="gemini">Google Gemini</option><option value="deepseek">DeepSeek</option><option value="openrouter">OpenRouter</option>
+          <option value="groq">Groq</option><option value="ollama">Ollama (on this machine)</option><option value="custom">Custom (OpenAI-compatible)</option>
+        </select></label>
+        <label>Base URL<input id="llmBase" type="url" placeholder="https://api.openai.com/v1"></label>
+        <label>Model<input id="llmModel" list="llmModels" placeholder="model name"><datalist id="llmModels"></datalist></label>
+        <label>API key<input id="llmKey" type="password" autocomplete="new-password" placeholder="sk-…"></label>
+      </div>
+      <div class="options" style="margin:14px 0 0">
+        <button class="btn" type="button" id="llmLoadModels">Load models</button>
+        <button class="btn" type="button" id="llmTest">Test connection</button>
+        <span style="flex:1"></span>
+        <button class="btn" type="button" id="llmRemove">Turn off</button>
+        <button class="btn primary" type="button" id="llmSave">Save</button>
+      </div>
+      <div id="llmResult" class="meta"></div>
+    </div>
+  </section>
+
+  <!-- ===================== NETWORK ===================== -->
+  <section class="view" id="view-network">
+    <div class="hero"><h1>Network</h1><p>This node, its engines, and the peers it trades searches with. Refreshes every 5 seconds.</p></div>
+    <div class="stats" id="stats"></div>
+    <h2>Engines</h2>
+    <div class="engines" id="engines"></div>
+    <h2>Peers</h2>
+    <div class="table-wrap"><table class="t"><thead><tr><th>Node</th><th>Route</th><th>Status</th><th>Answered</th><th>Asked / served</th><th>Priority</th><th>Agreement</th><th>Latency</th><th>Online</th></tr></thead><tbody id="peers"></tbody></table></div>
+  </section>
+
+  <!-- ===================== CONNECT ===================== -->
+  <section class="view" id="view-connect">
+    <div class="hero"><h1>Connect</h1><p>Use this node from code, Firecrawl SDKs, or AI agents over MCP.</p></div>
+    <div class="panel panel-pad" style="margin-bottom:16px">
+      <div class="kv"><strong style="width:72px">API URL</strong><input id="cUrl" readonly><button class="btn small" data-copy="cUrl"><svg><use href="#i-copy"/></svg>Copy</button></div>
+      <div class="kv" style="margin:0"><strong style="width:72px">API key</strong><input id="cKey" readonly><button class="btn small" data-copy="cKey"><svg><use href="#i-copy"/></svg>Copy</button></div>
+    </div>
+    <div class="cards" id="connectCards"></div>
+  </section>
+</main>
+
+<div class="lock" id="lock">
+  <div class="lock-card">
+    <img src="favicon.png" alt="" width="36" height="36">
+    <h2>Sign in to this node</h2>
+    <p>This HiveCrawl node is private: only someone with its API key can use it. You do this once per browser.</p>
+    <div class="lock-step"><div class="n">1</div><div class="b">On the machine running the node, in the <code>hivecrawl</code> folder, run:
+      <div class="cmd"><code id="loginCmd">docker compose exec hivecrawl /hivecrawl login</code><button type="button" class="btn small" data-copy="loginCmd">Copy</button></div>
+      <small>It prints a sign-in link and the key.</small></div></div>
+    <div class="lock-step"><div class="n">2</div><div class="b">Open the link it prints, <b>or</b> paste the key here:
+      <form id="keyForm"><input id="keyInput" type="password" placeholder="hc-…" autocomplete="off" spellcheck="false"><button class="btn primary" type="submit">Sign in</button></form>
+      <div id="keyErr"></div>
+      <small>The key is kept only in this browser. You can sign out later in Settings.</small></div></div>
+    <details><summary>Other places to find the key</summary>
+      <p>If you set <code>HC_API_KEYS</code> in the node's <code>.env</code>, use that value (<code>grep HC_API_KEYS .env</code>). Otherwise the node made one on first start and saved it in its data volume; the command above prints it, and the first start's log shows it too (<code>docker compose logs hivecrawl | grep sign</code>).</p>
+    </details>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="marked.min.js"></script>
+<script src="purify.min.js"></script>
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const store = {
+  get(k) { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+};
+let apiKey = store.get("hc-key");
+let config = { node: "", keyRequired: false };
+const origin = location.origin;
+
+function esc(s) { return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+function host(u) { try { return new URL(u).hostname.replace(/^www\./, ""); } catch (e) { return u; } }
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 1600); }
+function copy(text) { navigator.clipboard?.writeText(text).then(() => toast("Copied"), () => toast("Copy failed")); }
+// Scraped pages are untrusted: markdown is rendered, then sanitized by DOMPurify.
+function md(src) {
+  const html = window.marked ? marked.parse(src || "", { gfm: true, breaks: false }) : esc(src);
+  const clean = window.DOMPurify ? DOMPurify.sanitize(html, { FORBID_TAGS: ["style", "form", "input", "iframe"], FORBID_ATTR: ["style"] }) : esc(src);
+  const div = document.createElement("div");
+  div.innerHTML = clean;
+  div.querySelectorAll("a").forEach((a) => { a.target = "_blank"; a.rel = "noopener noreferrer"; });
+  div.querySelectorAll("img").forEach((i) => { i.loading = "lazy"; i.referrerPolicy = "no-referrer"; });
+  return div.innerHTML;
+}
+function since(t) { if (!t) return "—"; const m = Math.round((Date.now() - new Date(t)) / 60000); return m < 60 ? m + " min" : (m / 60).toFixed(1) + " h"; }
+
+/* ---------- theme ---------- */
+(function () {
+  const saved = store.get("hc-theme");
+  if (saved) document.documentElement.dataset.theme = saved;
+  $("themeBtn").onclick = () => {
+    const cur = document.documentElement.dataset.theme;
+    const dark = cur ? cur === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+    const next = dark ? "light" : "dark";
+    document.documentElement.dataset.theme = next;
+    store.set("hc-theme", next);
+  };
+})();
+
+/* ---------- api ---------- */
+async function api(path, opts = {}) {
+  opts.headers = Object.assign({ "Content-Type": "application/json" }, opts.headers);
+  if (apiKey) opts.headers.Authorization = "Bearer " + apiKey;
+  const r = await fetch(path, opts);
+  if (r.status === 401) { lock("That key was not accepted. Check it and try again."); throw new Error("This node needs an API key."); }
+  const body = await r.json().catch(() => ({ success: false, error: "Bad response (" + r.status + ")" }));
+  body._h = r.headers;
+  return body;
+}
+function lock(msg) {
+  document.body.classList.add("locked");
+  $("keyErr").innerHTML = msg ? '<div class="err">' + esc(msg) + "</div>" : "";
+  setTimeout(() => $("keyInput").focus(), 30);
+}
+// Checks a key against the node before letting the UI in.
+async function signIn(key) {
+  const r = await fetch("/v1/status", { headers: { Authorization: "Bearer " + key } }).catch(() => null);
+  if (!r) { lock("Can't reach the node."); return false; }
+  if (r.status === 401) { lock("That key was not accepted. Check it and try again."); return false; }
+  apiKey = key; store.set("hc-key", key);
+  renderConnect(); renderSearchCode(); renderScrapeCode(); renderMapCode(); renderCrawlCode(); renderAICode();
+  if (started) show(viewFromHash());
+  start();
+  return true;
+}
+function signOut() {
+  apiKey = ""; store.set("hc-key", ""); $("keyInput").value = ""; lock(); toast("Signed out");
+}
+// The key icon opens Node access; signing out is a deliberate button there.
+$("keyBtn").onclick = () => show("settings");
+$("keyBtn").title = "Node access";
+$("keyForm").onsubmit = async (e) => { e.preventDefault(); const k = $("keyInput").value.trim(); if (k && await signIn(k)) toast("Signed in"); };
+
+
+/* ---------- tabs ---------- */
+let statusTimer;
+function show(view) {
+  document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.dataset.view === view));
+  document.querySelectorAll(".view").forEach((v) => v.classList.toggle("active", v.id === "view-" + view));
+  clearInterval(statusTimer);
+  if (view === "network") { loadStatus(); statusTimer = setInterval(loadStatus, 5000); }
+  if (view === "connect") renderConnect();
+  if (view === "settings") loadSettings();
+  if (view === "ai") $("aiNotice").innerHTML = config.llm ? "" : '<div class="notice">This node has no LLM configured, so Extract, Agent and the AI scrape formats are off. Configure one in <a href="#settings" onclick="show(\'settings\');return false">Settings</a> — Anthropic, OpenAI, Gemini, DeepSeek, OpenRouter, Groq and Ollama all work.</div>';
+  history.replaceState(null, "", location.search + "#" + view);
+}
+document.querySelectorAll(".tab").forEach((t) => (t.onclick = () => show(t.dataset.view)));
+
+/* ---------- code snippets ---------- */
+function hl(code) {
+  return esc(code)
+    .replace(/(&quot;.*?&quot;|&#39;[\s\S]*?&#39;)/g, '<span class="s">$1</span>')
+    .replace(/^(\s*#.*|\s*\/\/.*)$/gm, '<span class="c">$1</span>')
+    .replace(/\b(curl|from|import|const|await|new|print|for|in)\b/g, '<span class="k">$1</span>');
+}
+function codePanel(el, snippets, note) {
+  const langs = Object.keys(snippets);
+  const cur = el.dataset.lang && snippets[el.dataset.lang] ? el.dataset.lang : langs[0];
+  el.innerHTML = '<div class="viewer-head"><svg style="width:16px;height:16px;color:var(--muted);margin:0 4px"><use href="#i-code"/></svg>' +
+    langs.map((l) => '<button class="seg' + (l === cur ? " active" : "") + '" data-l="' + l + '">' + l + "</button>").join("") +
+    '<span class="spacer"></span><button class="btn small" data-act="copy"><svg><use href="#i-copy"/></svg>Copy</button></div>' +
+    '<pre class="code">' + hl(snippets[cur]) + "</pre>" + (note ? '<div class="side-note">' + note + "</div>" : "");
+  el.querySelectorAll(".seg").forEach((b) => (b.onclick = () => { el.dataset.lang = b.dataset.l; codePanel(el, snippets, note); }));
+  el.querySelector('[data-act="copy"]').onclick = () => copy(snippets[cur]);
+}
+const keyShown = () => (apiKey ? apiKey : "<YOUR_HQ_API_KEY>");
+function pyList(a) { return "[" + a.map((x) => JSON.stringify(x)).join(", ") + "]"; }
+function curlCmd(path, body) {
+  return "curl -X POST " + origin + path + " \\\n  -H 'Authorization: Bearer " + keyShown() + "' \\\n  -H 'Content-Type: application/json' \\\n  -d '" + JSON.stringify(body, null, 2).replace(/'/g, "'\\''") + "'";
+}
+
+let currentSrc = "web";
+document.querySelectorAll("#srcSeg .seg").forEach((b) => (b.onclick = () => {
+  currentSrc = b.dataset.src;
+  document.querySelectorAll("#srcSeg .seg").forEach((x) => x.classList.toggle("active", x === b));
+  renderSearchCode();
+  if ($("q").value.trim()) $("searchForm").requestSubmit();
+}));
+function searchBody() {
+  const b = { query: $("q").value.trim() || "kerala monsoon forecast", limit: +$("limit").value };
+  if (currentSrc !== "web") b.sources = [currentSrc];
+  if ($("tbs").value) b.tbs = $("tbs").value;
+  const d = $("domains").value.split(/[,\s]+/).filter(Boolean);
+  if (d.length) b.includeDomains = d;
+  if ($("withContent").checked) b.scrapeOptions = { formats: ["markdown"] };
+  if ($("localOnly").checked) b.localOnly = true;
+  return b;
+}
+function renderSearchCode() {
+  const b = searchBody();
+  const py = ["from firecrawl import Firecrawl"];
+  const args = [JSON.stringify(b.query), "limit=" + b.limit];
+  if (b.tbs) args.push('tbs="' + b.tbs + '"');
+  if (b.includeDomains) args.push("include_domains=" + pyList(b.includeDomains));
+  if (b.sources) args.push("sources=" + pyList(b.sources));
+  if (b.scrapeOptions) { py.push("from firecrawl.v2.types import ScrapeOptions"); args.push('scrape_options=ScrapeOptions(formats=["markdown"])'); }
+  py.push("", 'app = Firecrawl(api_key="' + keyShown() + '", api_url="' + origin + '")', "results = app.search(" + args.join(", ") + ")", "for r in results." + currentSrc + ":", "    print(r)");
+  const jsOpts = Object.assign({}, b); delete jsOpts.query; delete jsOpts.localOnly;
+  const js = ['import Firecrawl from "@mendable/firecrawl-js";', "", 'const app = new Firecrawl({ apiKey: "' + keyShown() + '", apiUrl: "' + origin + '" });',
+    "const results = await app.search(" + JSON.stringify(b.query) + ", " + JSON.stringify(jsOpts) + ");", "console.log(results.web);"];
+  codePanel($("searchCode"), { cURL: curlCmd("/v2/search", b), Python: py.join("\n"), Node: js.join("\n") }, "Works with the official Firecrawl SDKs — point <code>api_url</code> at this node.");
+}
+function scrapeBody() {
+  const formats = [...document.querySelectorAll("#formats input:checked")].map((i) => i.value);
+  if ($("jsonPrompt").value.trim()) formats.push({ type: "json", prompt: $("jsonPrompt").value.trim() });
+  const b = { url: $("url").value.trim() || "https://en.wikipedia.org/wiki/Kerala", formats: formats.length ? formats : ["markdown"] };
+  if ($("mobile").checked) b.mobile = true;
+  if (+$("waitFor").value) b.waitFor = +$("waitFor").value;
+  if (!$("mainOnly").checked) b.onlyMainContent = false;
+  const inc = $("includeTags").value.split(",").map((s) => s.trim()).filter(Boolean);
+  const exc = $("excludeTags").value.split(",").map((s) => s.trim()).filter(Boolean);
+  if (inc.length) b.includeTags = inc;
+  if (exc.length) b.excludeTags = exc;
+  return b;
+}
+function renderScrapeCode() {
+  const b = scrapeBody();
+  const pyArgs = [JSON.stringify(b.url), "formats=" + pyList(b.formats)];
+  if (b.onlyMainContent === false) pyArgs.push("only_main_content=False");
+  if (b.includeTags) pyArgs.push("include_tags=" + pyList(b.includeTags));
+  if (b.excludeTags) pyArgs.push("exclude_tags=" + pyList(b.excludeTags));
+  if (b.mobile) pyArgs.push("mobile=True");
+  if (b.waitFor) pyArgs.push("wait_for=" + b.waitFor);
+  const py = ["from firecrawl import Firecrawl", "", 'app = Firecrawl(api_key="' + keyShown() + '", api_url="' + origin + '")', "doc = app.scrape(" + pyArgs.join(", ") + ")", "print(doc.markdown)"].join("\n");
+  const o = Object.assign({}, b); delete o.url;
+  const js = ['import Firecrawl from "@mendable/firecrawl-js";', "", 'const app = new Firecrawl({ apiKey: "' + keyShown() + '", apiUrl: "' + origin + '" });', "const doc = await app.scrape(" + JSON.stringify(b.url) + ", " + JSON.stringify(o) + ");", "console.log(doc.markdown);"].join("\n");
+  codePanel($("scrapeCode"), { cURL: curlCmd("/v2/scrape", b), Python: py, Node: js }, "Fetched by this node with a Chrome fingerprint; JavaScript pages, actions, mobile and screenshots use its headless Chrome. PDF and DOCX work too.");
+}
+["q", "limit", "tbs", "domains", "withContent", "localOnly"].forEach((id) => $(id).addEventListener("input", renderSearchCode));
+["url", "mainOnly", "includeTags", "excludeTags", "mobile", "waitFor", "jsonPrompt"].forEach((id) => $(id).addEventListener("input", renderScrapeCode));
+$("formats").addEventListener("change", renderScrapeCode);
+
+/* ---------- search ---------- */
+function routeBadges(src) {
+  if (!src) return "";
+  return src.split("+").map((p) => {
+    if (p === "cache") return '<span class="badge cache">cache</span>';
+    if (p === "local") return '<span class="badge local">this node</span>';
+    if (p === "warp") return '<span class="badge warp">WARP</span>';
+    if (p.startsWith("peer:")) return '<span class="badge peer">peer · ' + esc(p.slice(5)) + "</span>";
+    return '<span class="badge">' + esc(p) + "</span>";
+  }).join("");
+}
+function engineTags(h) {
+  const e = (h.get("X-HC-Engines") || "").split(",").filter(Boolean);
+  const b = (h.get("X-HC-Blocked") || "").split(",").filter(Boolean);
+  return (e.length ? "<span>engines</span>" + e.map((x) => '<span class="tag">' + esc(x) + "</span>").join(" ") : "") +
+    (b.length ? '<span style="margin-left:4px">blocked here</span>' + b.map((x) => '<span class="badge bad">' + esc(x) + "</span>").join("") : "");
+}
+let lastResults = [];
+$("searchForm").onsubmit = async (e) => {
+  e.preventDefault();
+  renderSearchCode();
+  if (!$("q").value.trim()) { $("q").focus(); return; }
+  const body = searchBody();
+  history.replaceState(null, "", "?q=" + encodeURIComponent(body.query) + "#search");
+  $("searchBtn").disabled = true;
+  $("searchMeta").textContent = body.scrapeOptions ? "Searching and fetching pages…" : "Searching…";
+  $("searchWarn").innerHTML = "";
+  $("results").innerHTML = '<div class="skeleton"></div>'.repeat(4);
+  try {
+    const d = await api("/v2/search", { method: "POST", body: JSON.stringify(body) });
+    if (!d.success) throw new Error(d.error || "Search failed");
+    const web = d.data.web || [];
+    lastResults = web;
+    const others = d.data.news || d.data.images;
+    const took = Number(d._h.get("X-HC-Took-Ms") || 0);
+    const count = currentSrc === "web" ? web.length : (others || []).length;
+    $("searchMeta").innerHTML = "<strong>" + count + " results</strong><span>" + (took / 1000).toFixed(2) + "s</span>" + routeBadges(d._h.get("X-HC-Source")) + engineTags(d._h);
+    $("searchWarn").innerHTML = d.warning ? '<div class="warning">' + esc(d.warning) + "</div>" : "";
+    if (currentSrc === "news") { renderNews(d.data.news || []); return; }
+    if (currentSrc === "images") { renderImages(d.data.images || []); return; }
+    $("results").innerHTML = web.length ? web.map((r, i) => {
+      const h = host(r.url);
+      const content = r.markdown ? '<details class="content"><summary>Page content · ' + (r.markdown.length / 1000).toFixed(1) + 'k chars</summary><div class="prose">' + md(r.markdown.slice(0, 20000)) + "</div></details>"
+        : r.metadata && r.metadata.error ? '<details class="content"><summary>Could not fetch page</summary><div class="side-note">' + esc(r.metadata.error) + "</div></details>" : "";
+      return '<article class="result"><div class="r-top"><div class="r-pos">' + (r.position || i + 1) + '</div><div class="favicon">' + esc(h.slice(0, 1)) + '</div><div class="r-body">' +
+        '<div class="r-host">' + esc(h) + "</div>" +
+        '<a class="r-title" href="' + esc(r.url) + '" target="_blank" rel="noopener noreferrer">' + esc(r.title || r.url) + "</a>" +
+        '<p class="r-desc">' + esc(r.description) + "</p></div>" +
+        '<div class="r-actions"><button class="btn small" data-scrape="' + i + '" title="Open in Scrape"><svg><use href="#i-doc"/></svg><span>Scrape</span></button></div></div>' + content + "</article>";
+    }).join("") : '<div class="empty">No results. Try different words, or turn off "This node only".</div>';
+  } catch (err) {
+    $("searchMeta").innerHTML = "";
+    $("results").innerHTML = '<div class="err">' + esc(err.message) + "</div>";
+  } finally {
+    $("searchBtn").disabled = false;
+  }
+};
+function renderNews(news) {
+  $("results").innerHTML = news.length ? news.map((r) => {
+    const h = host(r.url);
+    const when = r.date ? new Date(r.date).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "";
+    return '<article class="result"><div class="r-top">' + (r.imageUrl ? '<img class="news-thumb" loading="lazy" referrerpolicy="no-referrer" src="' + esc(r.imageUrl) + '" alt="">' : '<div class="favicon">' + esc(h.slice(0, 1)) + "</div>") +
+      '<div class="r-body"><div class="r-host">' + esc(h) + (when ? '<span class="news-date">' + esc(when) + "</span>" : "") + "</div>" +
+      '<a class="r-title" href="' + esc(r.url) + '" target="_blank" rel="noopener noreferrer">' + esc(r.title || r.url) + "</a>" +
+      '<p class="r-desc">' + esc(r.snippet) + "</p></div></div></article>";
+  }).join("") : '<div class="empty">No news found. Try a broader query or a longer time range.</div>';
+}
+function renderImages(imgs) {
+  $("results").innerHTML = imgs.length ? '<div class="img-grid">' + imgs.map((r) =>
+    '<a class="img-card" href="' + esc(r.url) + '" target="_blank" rel="noopener noreferrer"><img loading="lazy" referrerpolicy="no-referrer" src="' + esc(r.imageUrl) + '" alt="' + esc(r.title) + '">' +
+    "<div>" + esc(r.title || host(r.url)) + "<small>" + esc(host(r.url)) + (r.imageWidth ? " · " + r.imageWidth + "×" + r.imageHeight : "") + "</small></div></a>"
+  ).join("") + "</div>" : '<div class="empty">No images found.</div>';
+}
+
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-scrape]");
+  if (b) { $("url").value = lastResults[+b.dataset.scrape].url; renderScrapeCode(); show("scrape"); $("scrapeForm").requestSubmit(); return; }
+  const t = e.target.closest("[data-try]");
+  if (t) { e.preventDefault(); $("q").value = t.dataset.try; renderSearchCode(); $("searchForm").requestSubmit(); return; }
+  const c = e.target.closest("[data-code]");
+  if (c) { copy(c.dataset.code); return; }
+  const k = e.target.closest("[data-copy]");
+  if (k) { const el = $(k.dataset.copy); copy("value" in el ? el.value : el.textContent); }
+});
+
+/* ---------- scrape ---------- */
+let lastDoc = null, docView = "rendered";
+function renderDoc() {
+  const d = lastDoc, m = d.metadata || {};
+  const views = [];
+  if (d.summary || d.json !== undefined) views.push(["ai", "AI"]);
+  if (d.screenshot) views.push(["shot", "Screenshot"]);
+  if (d.markdown) views.push(["rendered", "Preview"], ["markdown", "Markdown"]);
+  if (d.html) views.push(["html", "HTML"]);
+  if (d.rawHtml) views.push(["rawHtml", "Raw HTML"]);
+  if (d.links) views.push(["links", "Links · " + d.links.length]);
+  views.push(["json", "JSON"]);
+  if (!views.some((v) => v[0] === docView)) docView = views[0][0];
+  let body = "";
+  if (docView === "ai") body = (d.summary ? '<div class="ai-box"><h4>Summary</h4><div class="prose" style="padding:0">' + md(d.summary) + "</div></div>" : "") +
+    (d.json !== undefined ? '<div class="ai-box"><h4>Extracted JSON</h4><pre class="raw" style="padding:0">' + esc(JSON.stringify(d.json, null, 2)) + "</pre></div>" : "");
+  else if (docView === "shot") body = '<img class="shot" alt="screenshot" src="' + esc(d.screenshot) + '">';
+  else if (docView === "rendered") body = '<div class="prose">' + md(d.markdown) + "</div>";
+  else if (docView === "markdown") body = '<pre class="raw">' + esc(d.markdown) + "</pre>";
+  else if (docView === "html") body = '<pre class="raw">' + esc(d.html) + "</pre>";
+  else if (docView === "rawHtml") body = '<pre class="raw">' + esc(d.rawHtml) + "</pre>";
+  else if (docView === "links") body = '<ol class="linklist">' + d.links.map((l) => '<li><a href="' + esc(l) + '" target="_blank" rel="noopener noreferrer">' + esc(l) + "</a></li>").join("") + "</ol>";
+  else body = '<pre class="raw">' + esc(JSON.stringify({ success: true, data: d }, null, 2)) + "</pre>";
+  const rows = [["Title", m.title], ["URL", m.url], ["Status", m.statusCode], ["Language", m.language], ["Description", m.description], ["Content type", m.contentType]]
+    .filter((r) => r[1]).map((r) => "<dt>" + r[0] + "</dt><dd>" + esc(r[1]) + "</dd>").join("");
+  $("scrapeOut").innerHTML = '<div class="panel viewer"><dl class="doc-meta">' + rows + '</dl><div class="viewer-head">' +
+    views.map((v) => '<button class="seg' + (v[0] === docView ? " active" : "") + '" data-v="' + v[0] + '">' + v[1] + "</button>").join("") +
+    '<span class="spacer"></span><button class="btn small" id="copyDoc"><svg><use href="#i-copy"/></svg>Copy</button></div><div class="viewer-body">' + body + "</div></div>";
+  $("scrapeOut").querySelectorAll(".seg").forEach((b) => (b.onclick = () => { docView = b.dataset.v; renderDoc(); }));
+  $("copyDoc").onclick = () => copy(docView === "json" ? JSON.stringify({ success: true, data: d }, null, 2) : docView === "links" ? d.links.join("\n") : (d[docView === "rendered" ? "markdown" : docView] || ""));
+}
+$("scrapeForm").onsubmit = async (e) => {
+  e.preventDefault();
+  renderScrapeCode();
+  if (!$("url").value.trim()) { $("url").focus(); return; }
+  const body = scrapeBody();
+  $("scrapeBtn").disabled = true;
+  $("scrapeMeta").textContent = "Fetching…";
+  $("scrapeOut").innerHTML = '<div class="skeleton" style="height:320px"></div>';
+  const t0 = performance.now();
+  try {
+    const d = await api("/v2/scrape", { method: "POST", body: JSON.stringify(body) });
+    if (!d.success) throw new Error((d.code ? d.code + ": " : "") + (d.error || "Scrape failed"));
+    lastDoc = d.data;
+    docView = d.data.summary || d.data.json !== undefined ? "ai" : d.data.screenshot ? "shot" : "rendered";
+    const size = (d.data.markdown || d.data.html || "").length;
+    $("scrapeMeta").innerHTML = '<span class="badge ' + (d.data.metadata.statusCode < 400 ? "local" : "bad") + '">HTTP ' + d.data.metadata.statusCode + "</span><span>" + ((performance.now() - t0) / 1000).toFixed(2) + "s</span><span>" + (size / 1000).toFixed(1) + "k chars</span>" + (d.data.warning ? '<span class="badge bad">' + esc(d.data.warning) + "</span>" : "");
+    renderDoc();
+  } catch (err) {
+    $("scrapeMeta").innerHTML = "";
+    $("scrapeOut").innerHTML = '<div class="err">' + esc(err.message) + "</div>";
+  } finally {
+    $("scrapeBtn").disabled = false;
+  }
+};
+
+/* ---------- map ---------- */
+function mapBody() {
+  const b = { url: $("mapUrl").value.trim() || "https://go.dev", limit: +$("mapLimit").value };
+  if ($("mapSearch").value.trim()) b.search = $("mapSearch").value.trim();
+  return b;
+}
+function renderMapCode() {
+  const b = mapBody();
+  const py = 'from firecrawl import Firecrawl\n\napp = Firecrawl(api_key="' + keyShown() + '", api_url="' + origin + '")\nres = app.map(' + JSON.stringify(b.url) + ", limit=" + b.limit + (b.search ? ", search=" + JSON.stringify(b.search) : "") + ")\nfor link in res.links:\n    print(link.url, link.title)";
+  const o = Object.assign({}, b); delete o.url;
+  const js = 'import Firecrawl from "@mendable/firecrawl-js";\n\nconst app = new Firecrawl({ apiKey: "' + keyShown() + '", apiUrl: "' + origin + '" });\nconst res = await app.map(' + JSON.stringify(b.url) + ", " + JSON.stringify(o) + ");\nconsole.log(res.links);";
+  codePanel($("mapCode"), { cURL: curlCmd("/v2/map", b), Python: py, Node: js });
+}
+["mapUrl", "mapSearch", "mapLimit"].forEach((id) => $(id).addEventListener("input", renderMapCode));
+$("mapForm").onsubmit = async (e) => {
+  e.preventDefault();
+  renderMapCode();
+  if (!$("mapUrl").value.trim()) { $("mapUrl").focus(); return; }
+  $("mapBtn").disabled = true; $("mapMeta").textContent = "Mapping…"; $("mapOut").innerHTML = '<div class="skeleton"></div>'.repeat(3);
+  const t0 = performance.now();
+  try {
+    const d = await api("/v2/map", { method: "POST", body: JSON.stringify(mapBody()) });
+    if (!d.success) throw new Error(d.error || "Map failed");
+    $("mapMeta").innerHTML = "<strong>" + d.links.length + " URLs</strong><span>" + ((performance.now() - t0) / 1000).toFixed(1) + "s</span>";
+    $("mapOut").innerHTML = d.links.length ? d.links.map((l) =>
+      '<div class="page-row"><div style="flex:1;min-width:0"><div class="t">' + esc(l.title || l.url) + '</div><div class="u">' + esc(l.url) + "</div></div>" +
+      '<button class="btn small" data-scrapeurl="' + esc(l.url) + '"><svg><use href="#i-doc"/></svg>Scrape</button></div>').join("") : '<div class="empty">No URLs found.</div>';
+  } catch (err) { $("mapMeta").innerHTML = ""; $("mapOut").innerHTML = '<div class="err">' + esc(err.message) + "</div>"; }
+  finally { $("mapBtn").disabled = false; }
+};
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-scrapeurl]");
+  if (b) { $("url").value = b.dataset.scrapeurl; renderScrapeCode(); show("scrape"); $("scrapeForm").requestSubmit(); }
+});
+
+/* ---------- crawl ---------- */
+let crawlTimer = null, crawlDocs = [], crawlId = "";
+function crawlBody() {
+  const b = { url: $("crawlUrl").value.trim() || "https://docs.python.org/3/tutorial/", limit: +$("crawlLimit").value, scrapeOptions: { formats: ["markdown"] } };
+  if ($("crawlDepth").value) b.maxDiscoveryDepth = +$("crawlDepth").value;
+  if ($("crawlInclude").value.trim()) b.includePaths = [$("crawlInclude").value.trim()];
+  if ($("crawlExclude").value.trim()) b.excludePaths = [$("crawlExclude").value.trim()];
+  if ($("crawlEntire").checked) b.crawlEntireDomain = true;
+  return b;
+}
+function renderCrawlCode() {
+  const b = crawlBody();
+  const args = [JSON.stringify(b.url), "limit=" + b.limit];
+  if (b.maxDiscoveryDepth) args.push("max_discovery_depth=" + b.maxDiscoveryDepth);
+  if (b.includePaths) args.push("include_paths=" + pyList(b.includePaths));
+  if (b.excludePaths) args.push("exclude_paths=" + pyList(b.excludePaths));
+  if (b.crawlEntireDomain) args.push("crawl_entire_domain=True");
+  const py = 'from firecrawl import Firecrawl\n\napp = Firecrawl(api_key="' + keyShown() + '", api_url="' + origin + '")\njob = app.crawl(' + args.join(", ") + ")  # waits until done\nfor doc in job.data:\n    print(doc.metadata.url, len(doc.markdown))";
+  const o = Object.assign({}, b); delete o.url;
+  const js = 'import Firecrawl from "@mendable/firecrawl-js";\n\nconst app = new Firecrawl({ apiKey: "' + keyShown() + '", apiUrl: "' + origin + '" });\nconst job = await app.crawl(' + JSON.stringify(b.url) + ", " + JSON.stringify(o) + ");\nconsole.log(job.data.length);";
+  codePanel($("crawlCode"), { cURL: curlCmd("/v2/crawl", b), Python: py, Node: js }, "Crawls run in the background; poll <code>GET /v2/crawl/{id}</code> or use a webhook.");
+}
+["crawlUrl", "crawlLimit", "crawlDepth", "crawlInclude", "crawlExclude", "crawlEntire"].forEach((id) => $(id).addEventListener("input", renderCrawlCode));
+function crawlStatusHTML(st) {
+  const pct = st.total ? Math.round((st.completed / st.total) * 100) : 0;
+  const running = st.status === "scraping";
+  return '<div class="panel panel-pad" style="margin-top:14px"><div style="display:flex;align-items:center;gap:10px"><span class="badge ' + (st.status === "completed" ? "peer" : st.status === "failed" || st.status === "cancelled" ? "bad" : "local") + '">' + esc(st.status) + "</span><strong>" + st.completed + " / " + st.total + " pages</strong><span style=\"flex:1\"></span>" +
+    (running ? '<button class="btn small" id="crawlCancel">Cancel</button>' : "") + '</div><div class="progress"><i style="width:' + pct + '%"></i></div>' +
+    (st.warning ? '<div class="side-note" style="border:0;padding:6px 0 0">' + esc(st.warning) + "</div>" : "") + "</div>";
+}
+async function pollCrawl() {
+  try {
+    let url = "/v2/crawl/" + crawlId, all = [], st;
+    for (;;) {
+      st = await api(url);
+      all = all.concat(st.data || []);
+      if (!st.next) break;
+      url = new URL(st.next).pathname + new URL(st.next).search;
+    }
+    crawlDocs = all;
+    $("crawlStatus").innerHTML = crawlStatusHTML(st);
+    if ($("crawlCancel")) $("crawlCancel").onclick = async () => { await api("/v2/crawl/" + crawlId, { method: "DELETE" }); pollCrawl(); };
+    $("crawlPages").innerHTML = crawlDocs.map((d, i) => '<div class="page-row" data-cdoc="' + i + '"><div style="flex:1;min-width:0"><div class="t">' + esc(d.metadata.title || d.metadata.url) + '</div><div class="u">' + esc(d.metadata.url) + "</div></div>" +
+      '<span class="tag">' + ((d.markdown || "").length / 1000).toFixed(1) + "k</span></div>").join("");
+    if (st.status === "scraping") crawlTimer = setTimeout(pollCrawl, 1500);
+    else $("crawlBtn").disabled = false;
+  } catch (err) { $("crawlStatus").innerHTML = '<div class="err">' + esc(err.message) + "</div>"; $("crawlBtn").disabled = false; }
+}
+$("crawlForm").onsubmit = async (e) => {
+  e.preventDefault();
+  renderCrawlCode();
+  if (!$("crawlUrl").value.trim()) { $("crawlUrl").focus(); return; }
+  clearTimeout(crawlTimer);
+  $("crawlBtn").disabled = true; $("crawlPages").innerHTML = ""; $("crawlDoc").innerHTML = "";
+  $("crawlStatus").innerHTML = '<div class="meta">Starting…</div>';
+  try {
+    const d = await api("/v2/crawl", { method: "POST", body: JSON.stringify(crawlBody()) });
+    if (!d.success) throw new Error(d.error || "Crawl failed to start");
+    crawlId = d.id; pollCrawl();
+  } catch (err) { $("crawlStatus").innerHTML = '<div class="err">' + esc(err.message) + "</div>"; $("crawlBtn").disabled = false; }
+};
+document.addEventListener("click", (e) => {
+  const r = e.target.closest("[data-cdoc]");
+  if (!r) return;
+  document.querySelectorAll("#crawlPages .page-row").forEach((x) => x.classList.toggle("active", x === r));
+  const d = crawlDocs[+r.dataset.cdoc];
+  $("crawlDoc").innerHTML = '<div class="panel viewer"><dl class="doc-meta"><dt>Title</dt><dd>' + esc(d.metadata.title) + "</dd><dt>URL</dt><dd>" + esc(d.metadata.url) + "</dd><dt>Status</dt><dd>" + d.metadata.statusCode + '</dd></dl><div class="viewer-body"><div class="prose">' + md(d.markdown || "") + "</div></div></div>";
+});
+
+/* ---------- AI ---------- */
+let aiMode = "extract", aiTimer = null;
+document.querySelectorAll("#aiSeg .seg").forEach((b) => (b.onclick = () => {
+  aiMode = b.dataset.ai;
+  document.querySelectorAll("#aiSeg .seg").forEach((x) => x.classList.toggle("active", x === b));
+  $("aiWebWrap").style.display = aiMode === "extract" ? "" : "none";
+  $("aiSchemaWrap").style.display = aiMode === "extract" ? "" : "none";
+  $("aiPrompt").placeholder = aiMode === "extract" ? "Extract the plan names and monthly prices" : "What is the date of Onam in 2026? Give a source.";
+  renderAICode();
+}));
+function aiBody() {
+  const b = { prompt: $("aiPrompt").value.trim() || (aiMode === "extract" ? "Extract the plan names and monthly prices" : "What is the date of Onam in 2026?") };
+  const urls = $("aiUrls").value.split(/\s+/).filter(Boolean);
+  if (urls.length) b.urls = urls;
+  if (aiMode === "extract") {
+    if ($("aiWeb").checked) b.enableWebSearch = true;
+    const sc = $("aiSchema").value.trim();
+    if (sc) { try { b.schema = JSON.parse(sc); } catch (e) { b.schema = "INVALID JSON"; } }
+    b.showSources = true;
+  }
+  return b;
+}
+function renderAICode() {
+  const b = aiBody(), path = "/v2/" + aiMode;
+  const pyCall = aiMode === "extract"
+    ? "res = app.extract(" + (b.urls ? "urls=" + pyList(b.urls) + ", " : "") + "prompt=" + JSON.stringify(b.prompt) + (b.enableWebSearch ? ", enable_web_search=True" : "") + ")\nprint(res.data)"
+    : "res = app.agent(prompt=" + JSON.stringify(b.prompt) + (b.urls ? ", urls=" + pyList(b.urls) : "") + ")\nprint(res.data)";
+  const py = 'from firecrawl import Firecrawl\n\napp = Firecrawl(api_key="' + keyShown() + '", api_url="' + origin + '")\n' + pyCall;
+  codePanel($("aiCode"), { cURL: curlCmd(path, b), Python: py }, "Runs as a background job; the SDKs wait for the result.");
+}
+["aiPrompt", "aiUrls", "aiSchema", "aiWeb"].forEach((id) => $(id).addEventListener("input", renderAICode));
+$("aiForm").onsubmit = async (e) => {
+  e.preventDefault();
+  renderAICode();
+  const b = aiBody();
+  if (b.schema === "INVALID JSON") { $("aiOut").innerHTML = '<div class="err">The schema is not valid JSON.</div>'; return; }
+  clearTimeout(aiTimer);
+  $("aiBtn").disabled = true; $("aiOut").innerHTML = ""; $("aiMeta").textContent = aiMode === "extract" ? "Reading pages and extracting…" : "Researching… (an agent may take a minute)";
+  const t0 = performance.now();
+  try {
+    const d = await api("/v2/" + aiMode, { method: "POST", body: JSON.stringify(b) });
+    if (!d.success) throw new Error(d.error || "Failed to start");
+    const poll = async () => {
+      const st = await api("/v2/" + aiMode + "/" + d.id);
+      $("aiMeta").innerHTML = '<span class="badge ' + (st.status === "completed" ? "peer" : st.status === "failed" ? "bad" : "local") + '">' + esc(st.status) + "</span><span>" + ((performance.now() - t0) / 1000).toFixed(0) + "s</span>";
+      if (st.status === "processing") { aiTimer = setTimeout(poll, 1500); return; }
+      $("aiBtn").disabled = false;
+      if (st.status !== "completed") { $("aiOut").innerHTML = '<div class="err">' + esc(st.error || "Failed") + "</div>"; return; }
+      $("aiOut").innerHTML = '<div class="panel viewer"><div class="ai-box"><h4>Result</h4><pre class="raw" style="padding:0">' + esc(JSON.stringify(st.data, null, 2)) + "</pre></div>" +
+        (st.sources && st.sources.length ? '<div class="ai-box" style="border:0"><h4>Sources</h4><ol class="linklist" style="padding:0 0 0 18px">' + st.sources.map((u) => '<li><a href="' + esc(u) + '" target="_blank" rel="noopener noreferrer">' + esc(u) + "</a></li>").join("") + "</ol></div>" : "") + "</div>";
+    };
+    poll();
+  } catch (err) { $("aiMeta").innerHTML = ""; $("aiOut").innerHTML = '<div class="err">' + esc(err.message) + "</div>"; $("aiBtn").disabled = false; }
+};
+
+/* ---------- settings ---------- */
+const providers = {
+  openai: { base: "https://api.openai.com/v1", model: "e.g. gpt-4.1-mini" },
+  anthropic: { base: "https://api.anthropic.com/v1", model: "e.g. claude-haiku-5-5" },
+  gemini: { base: "https://generativelanguage.googleapis.com/v1beta/openai", model: "e.g. gemini-2.5-flash" },
+  deepseek: { base: "https://api.deepseek.com", model: "e.g. deepseek-chat" },
+  openrouter: { base: "https://openrouter.ai/api/v1", model: "e.g. openai/gpt-4.1-mini" },
+  groq: { base: "https://api.groq.com/openai/v1", model: "e.g. llama-3.3-70b-versatile" },
+  ollama: { base: "http://host.docker.internal:11434/v1", model: "e.g. qwen2.5:7b", noKey: true },
+  custom: { base: "", model: "model name" },
+};
+function guessProvider(base) {
+  for (const [k, v] of Object.entries(providers)) if (v.base && base && base.startsWith(v.base.replace(/\/v1$/, ""))) return k;
+  return "custom";
+}
+function llmForm() {
+  return { provider: $("llmProvider").value, baseUrl: $("llmBase").value.trim(), model: $("llmModel").value.trim(), apiKey: $("llmKey").value.trim() };
+}
+function llmMsg(html, bad) { $("llmResult").innerHTML = '<span class="badge ' + (bad ? "bad" : "peer") + '">' + (bad ? "error" : "ok") + "</span><span>" + html + "</span>"; }
+async function loadSettings() {
+  $("accessState").innerHTML = apiKey
+    ? '<span class="badge peer">signed in</span><span>this browser uses key</span><span class="tag">' + esc(apiKey.slice(0, 3) + "…" + apiKey.slice(-4)) + "</span>"
+    : '<span class="badge">open</span><span>this node has no API key</span>';
+  try {
+    const st = await api("/v1/settings");
+    const l = st.llm;
+    $("llmState").innerHTML = l.configured
+      ? '<span class="badge peer">on</span><span>' + esc(l.model) + " at " + esc(l.baseUrl) + "</span>" + (l.keySet ? '<span class="tag">key ' + esc(l.keyHint) + "</span>" : "")
+      : '<span class="badge">off</span><span>No AI model configured.</span>';
+    if (l.baseUrl) {
+      $("llmProvider").value = l.provider && providers[l.provider] ? l.provider : guessProvider(l.baseUrl);
+      $("llmBase").value = l.baseUrl; $("llmModel").value = l.model;
+    } else onProvider();
+    $("llmKey").value = "";
+    $("llmKey").placeholder = l.keySet ? "saved (" + l.keyHint + ") — leave empty to keep" : "sk-…";
+    config.llm = l.configured;
+  } catch (err) { $("llmState").innerHTML = '<div class="err">' + esc(err.message) + "</div>"; }
+}
+function onProvider() {
+  const p = providers[$("llmProvider").value];
+  $("llmBase").value = p.base; $("llmModel").value = ""; $("llmModel").placeholder = p.model;
+  $("llmKey").placeholder = p.noKey ? "not needed for Ollama" : "sk-…";
+}
+$("llmProvider").onchange = onProvider;
+$("copyLink").onclick = () => copy(origin + "/#key=" + encodeURIComponent(apiKey));
+$("copyKey").onclick = () => copy(apiKey);
+$("signOut").onclick = () => { if (confirmSignOut()) signOut(); };
+function confirmSignOut() {
+  const b = $("signOut");
+  if (b.dataset.armed) return true;
+  b.dataset.armed = "1"; b.textContent = "Click again to sign out";
+  setTimeout(() => { delete b.dataset.armed; b.textContent = "Sign out of this browser"; }, 3000);
+  return false;
+}
+$("llmLoadModels").onclick = async () => {
+  $("llmResult").textContent = "Loading models…";
+  const d = await api("/v1/settings/llm/models", { method: "POST", body: JSON.stringify(llmForm()) }).catch((e) => ({ success: false, error: e.message }));
+  if (!d.success) return llmMsg(esc(d.error), true);
+  $("llmModels").innerHTML = d.models.map((m) => '<option value="' + esc(m) + '">').join("");
+  llmMsg(d.models.length + " models available — pick one in the Model field");
+};
+$("llmTest").onclick = async () => {
+  $("llmResult").textContent = "Testing…";
+  const d = await api("/v1/settings/llm/test", { method: "POST", body: JSON.stringify(llmForm()) }).catch((e) => ({ success: false, error: e.message }));
+  if (d.success) llmMsg("model answered “" + esc(d.reply) + "” in " + d.latencyMs + " ms");
+  else llmMsg(esc(d.error), true);
+};
+$("llmSave").onclick = async () => {
+  const d = await api("/v1/settings/llm", { method: "PUT", body: JSON.stringify(llmForm()) }).catch((e) => ({ error: e.message }));
+  if (d.error) return llmMsg(esc(d.error), true);
+  llmMsg("saved — AI features are on");
+  loadSettings();
+};
+$("llmRemove").onclick = async () => {
+  await api("/v1/settings/llm", { method: "DELETE" });
+  llmMsg("AI features are off");
+  loadSettings();
+};
+
+/* ---------- network ---------- */
+async function loadStatus() {
+  try {
+    const s = await api("/v1/status");
+    const peers = s.peers || [];
+    const verified = peers.filter((p) => p.verified).length;
+    const ch = s.cache || {}, hits = ch.hits || 0, total = hits + (ch.misses || 0);
+    const stat = (k, v, sub) => '<div class="stat"><div class="k">' + k + '</div><div class="v">' + esc(v) + "</div>" + (sub ? '<div class="s">' + esc(sub) + "</div>" : "") + "</div>";
+    const pub = s.mode.startsWith("public");
+    $("stats").innerHTML =
+      stat("Node", s.node, (s.id || "").slice(0, 18)) +
+      stat("Mode", pub ? "Public" : s.mode.startsWith("home") ? "Home" : "Standalone", s.publicUrl || (s.mode.startsWith("home") ? "behind NAT · tunnels out" : "")) +
+      stat("Peers", peers.length, verified + " verified") +
+      (pub ? stat("Tunnels", s.tunnels ?? 0, "home nodes relayed here") : "") +
+      stat("Cache", (ch.entries || 0) + (ch.entries === 1 ? " query" : " queries"), total ? Math.round((hits / total) * 100) + "% hit rate" : "no lookups yet") +
+      stat("Uptime", since(new Date(Date.now() - s.uptimeSec * 1000)), "v" + (s.version || "")) +
+      stat("AI (LLM)", s.llm ? "on" : "off", s.llm || "set HC_LLM_* to enable") +
+      stat("Browser", s.browser ? "on" : "off", s.browser ? "JS pages, screenshots, actions" : "set HC_BROWSER") +
+      stat("Network", s.network || "off", s.network === "community" ? "public — anyone can join, no setup" : s.network === "private" ? "your own HC_NETWORK_KEY" : "standalone node") +
+      stat("Page fetches for peers", s.serveScrapes ? "on" : "off", s.serveScrapes ? "verified peers may fetch via this node" : "opt in with HC_SERVE_SCRAPES");
+    const blocked = (s.searxng && s.searxng.blocked) || {};
+    const known = s.engines || [];
+    const all = [...new Set([...known, ...(s.warp ? known.map((e) => e + " warp") : []), ...Object.keys(blocked)])];
+    $("engines").innerHTML = all.length ? all.map((e) => {
+      const why = blocked[e];
+      return '<div class="engine"><span class="dot ' + (why ? "bad" : "") + '"></span>' + esc(e) + (why ? '<span class="why">' + esc(why) + "</span>" : "") + "</div>";
+    }).join("") : '<div class="side-note">No engine data yet — run a search.</div>';
+    const name = (id) => { const p = peers.find((x) => x.id === id); return p ? p.name || id.slice(0, 8) : id.slice(0, 8); };
+    $("peers").innerHTML = peers.length ? peers.map((p) => {
+      const route = p.tunneled ? '<span class="badge peer">tunnel → here</span>' : p.url ? '<span class="tag">' + esc(host(p.url)) + "</span>" : p.via ? '<span class="badge">via ' + esc(name(p.via)) + "</span>" : "—";
+      const n = p.ok + p.fail, rate = n ? Math.round((p.ok / n) * 100) : null;
+      return "<tr><td><strong>" + esc(p.name || p.id.slice(0, 8)) + "</strong> <span class='tag'>" + esc(p.id.slice(0, 8)) + "</span></td>" +
+        "<td>" + route + "</td><td>" + (p.verified ? '<span class="badge peer">verified</span>' : '<span class="badge">trial</span>') + (p.scrapes ? ' <span class="badge warp">fetches pages</span>' : "") + "</td>" +
+        "<td class='num'>" + (rate === null ? "—" : '<span class="bar"><i style="width:' + rate + '%"></i></span>' + p.ok + "/" + n) + "</td>" +
+        "<td class='num'>" + p.asked + " / " + p.served + "</td><td class='num'>" + (p.priority || 1).toFixed(2) + "×</td>" +
+        "<td class='num'>" + (p.checks ? Math.round(p.agreement * 100) + "%" : "—") + "</td><td class='num'>" + (p.latencyMs ? p.latencyMs + " ms" : "—") + "</td><td class='num'>" + since(p.onlineSince) + "</td></tr>";
+    }).join("") : '<tr><td colspan="9" style="color:var(--muted)">No peers yet. Set HC_PEERS and HC_NETWORK_KEY to join a network.</td></tr>';
+    $("nodeLabel").textContent = s.node + " · " + peers.length + " peers";
+  } catch (err) {
+    $("stats").innerHTML = '<div class="err">' + esc(err.message) + "</div>";
+  }
+}
+
+/* ---------- connect ---------- */
+function snippetCard(icon, title, text, code) {
+  return '<div class="panel panel-pad card"><h3><svg><use href="#' + icon + '"/></svg>' + title + "</h3><p>" + text + '</p><div class="copy-wrap"><pre class="code">' + hl(code) + '</pre><button class="btn small" data-code="' + esc(code) + '"><svg><use href="#i-copy"/></svg>Copy</button></div></div>';
+}
+function renderConnect() {
+  $("cUrl").value = origin;
+  $("cKey").value = apiKey || "(not signed in)";
+  const k = keyShown();
+  $("connectCards").innerHTML =
+    snippetCard("i-bot", "Claude Code", "Adds HiveCrawl's tools to Claude Code: search, scrape, map, crawl, crawl status, extract and agent.", "claude mcp add --transport http hivecrawl " + origin + "/mcp \\\n  --header \"Authorization: Bearer " + k + "\"") +
+    snippetCard("i-bot", "Claude Desktop · Cursor · other MCP clients", "Streamable HTTP MCP server with the same 7 tools. Paste into the client's MCP config.", JSON.stringify({ mcpServers: { hivecrawl: { type: "http", url: origin + "/mcp", headers: { Authorization: "Bearer " + k } } } }, null, 2)) +
+    snippetCard("i-code", "Python · Firecrawl SDK", "pip install firecrawl-py, then point it at this node.", 'from firecrawl import Firecrawl\n\napp = Firecrawl(api_key="' + k + '", api_url="' + origin + '")\nprint(app.search("kerala tourism", limit=5))\nprint(app.scrape("https://en.wikipedia.org/wiki/Kerala").markdown)') +
+    snippetCard("i-code", "Node · Firecrawl SDK", "npm i @mendable/firecrawl-js, same API as Firecrawl.", 'import Firecrawl from "@mendable/firecrawl-js";\n\nconst app = new Firecrawl({ apiKey: "' + k + '", apiUrl: "' + origin + '" });\nconsole.log(await app.search("kerala tourism", { limit: 5 }));');
+}
+
+/* ---------- boot ---------- */
+function viewFromHash() {
+  const v = (location.hash || "#search").slice(1);
+  return ["search", "scrape", "map", "crawl", "ai", "network", "settings", "connect"].includes(v) ? v : "search";
+}
+// Runs once the UI is usable (signed in, or the node has no key).
+let started = false;
+function start() {
+  document.body.classList.remove("locked");
+  if (started) return;
+  started = true;
+  show(viewFromHash());
+  const q0 = new URLSearchParams(location.search).get("q");
+  if (q0) { $("q").value = q0; renderSearchCode(); $("searchForm").requestSubmit(); }
+}
+// A sign-in link carries the key in #key=…; take it and drop it from the URL.
+function takeKeyFromLink() {
+  if (!location.hash.startsWith("#key=")) return false;
+  apiKey = decodeURIComponent(location.hash.slice(5)); store.set("hc-key", apiKey);
+  history.replaceState(null, "", location.pathname + location.search + "#search");
+  return true;
+}
+takeKeyFromLink();
+// The link pasted into an already open tab only changes the hash.
+addEventListener("hashchange", () => { if (takeKeyFromLink()) signIn(apiKey).then((ok) => ok && toast("Signed in")); });
+fetch("/v1/config").then((r) => r.json()).then((c) => {
+  config = c;
+  $("nodeLabel").textContent = c.node;
+  $("nodePill").querySelector(".dot").className = "dot";
+  if (!c.keyRequired) start();
+  else if (apiKey) signIn(apiKey).then((ok) => ok || (apiKey = ""));
+  else lock();
+}).catch(() => {
+  lock("Can't reach the node. Is it running?"); $("nodeLabel").textContent = "offline"; $("nodePill").querySelector(".dot").className = "dot bad"; });
+renderSearchCode();
+renderScrapeCode();
+renderMapCode();
+renderCrawlCode();
+renderAICode();
+show(viewFromHash());
+</script>
+</body>
+</html>

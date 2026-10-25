@@ -1,0 +1,6 @@
+bin/
+.env
+data/
+*.key
+.env.*
+!.env.example

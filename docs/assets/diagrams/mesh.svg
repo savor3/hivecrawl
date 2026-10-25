@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" role="img" aria-label="Home nodes only dial out"><title>Home nodes only dial out</title><defs><filter id="sh" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#5a4a20" flood-opacity=".09"/></filter><marker id="ae2900c" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e2900c"/></marker><marker id="se2900c" viewBox="0 0 10 10" refX="1.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e2900c"/></marker><marker id="a2563eb" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/></marker><marker id="s2563eb" viewBox="0 0 10 10" refX="1.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/></marker><marker id="a12897f" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#12897f"/></marker><marker id="s12897f" viewBox="0 0 10 10" refX="1.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#12897f"/></marker></defs><rect width="100%" height="100%" fill="#f5f6f8"/>
+<text x="60" y="64" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="26" font-weight="750" fill="#1f2a37" text-anchor="start">Home nodes only dial out</text>
+<text x="60" y="92" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="15" font-weight="400" fill="#5b6675" text-anchor="start">No port forwarding, no open ports on your router. Home nodes open a tunnel up to public nodes; searches come back down it.</text>
+<rect x="60" y="120" width="1480" height="290" rx="24" fill="#eef1f5" stroke="#dde3ea" stroke-width="1.3"/>
+<text x="90" y="156" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="12" font-weight="700" fill="#5b6675" text-anchor="start">INTERNET</text>
+<rect x="220" y="250" width="240" height="96" rx="14" fill="#ffffff" stroke="#f5c66b" stroke-width="1.3"/>
+<text x="238" y="282" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="17" font-weight="650" fill="#1f2a37" text-anchor="start">Public node A</text>
+<text x="238" y="306.0" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">VPS · HTTPS</text>
+<rect x="680" y="250" width="240" height="96" rx="14" fill="#ffffff" stroke="#f5c66b" stroke-width="1.3"/>
+<text x="698" y="282" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="17" font-weight="650" fill="#1f2a37" text-anchor="start">Public node B</text>
+<text x="698" y="306.0" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">VPS · HTTPS</text>
+<rect x="1140" y="250" width="240" height="96" rx="14" fill="#ffffff" stroke="#f5c66b" stroke-width="1.3"/>
+<text x="1158" y="282" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="17" font-weight="650" fill="#1f2a37" text-anchor="start">Public node C</text>
+<text x="1158" y="306.0" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">VPS · HTTPS</text>
+<path d="M460,298 L680,298" fill="none" stroke="#e2900c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#ae2900c)" marker-start="url(#se2900c)"/>
+<rect x="542" y="275" width="56" height="22" rx="6" fill="#f5f6f8"/>
+<text x="570" y="290" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="12.5" font-weight="600" fill="#e2900c" text-anchor="middle">gossip</text>
+<path d="M920,298 L1140,298" fill="none" stroke="#e2900c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#ae2900c)" marker-start="url(#se2900c)"/>
+<rect x="1002" y="275" width="56" height="22" rx="6" fill="#f5f6f8"/>
+<text x="1030" y="290" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="12.5" font-weight="600" fill="#e2900c" text-anchor="middle">gossip</text>
+<rect x="140" y="520" width="400" height="300" rx="22" fill="#ffffff" stroke="#dde3ea" stroke-width="1.3"/>
+<text x="164" y="554" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="12" font-weight="700" fill="#5b6675" text-anchor="start">HOME NETWORK</text>
+<rect x="265" y="580" width="150" height="40" rx="10" fill="#eef1f5" stroke="#cdd4de" stroke-width="1.3"/>
+<text x="340" y="605" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13" font-weight="650" fill="#5b6675" text-anchor="middle">router · NAT</text>
+<rect x="200" y="690" width="280" height="100" rx="14" fill="#e0f5f3" stroke="#a9e0da" stroke-width="1.3"/>
+<text x="218" y="722" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="16" font-weight="650" fill="#1f2a37" text-anchor="start">Home node · laptop</text>
+<text x="218" y="746.0" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">no open ports</text>
+<text x="218" y="765.575" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">keeps 2 tunnels</text>
+<path d="M340,690 L340,620" stroke="#12897f" stroke-width="1.8" fill="none"/>
+<rect x="600" y="520" width="400" height="300" rx="22" fill="#ffffff" stroke="#dde3ea" stroke-width="1.3"/>
+<text x="624" y="554" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="12" font-weight="700" fill="#5b6675" text-anchor="start">HOME NETWORK</text>
+<rect x="725" y="580" width="150" height="40" rx="10" fill="#eef1f5" stroke="#cdd4de" stroke-width="1.3"/>
+<text x="800" y="605" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13" font-weight="650" fill="#5b6675" text-anchor="middle">router · NAT</text>
+<rect x="660" y="690" width="280" height="100" rx="14" fill="#e0f5f3" stroke="#a9e0da" stroke-width="1.3"/>
+<text x="678" y="722" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="16" font-weight="650" fill="#1f2a37" text-anchor="start">Home node · desktop</text>
+<text x="678" y="746.0" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">no open ports</text>
+<text x="678" y="765.575" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">keeps 2 tunnels</text>
+<path d="M800,690 L800,620" stroke="#12897f" stroke-width="1.8" fill="none"/>
+<rect x="1060" y="520" width="400" height="300" rx="22" fill="#ffffff" stroke="#dde3ea" stroke-width="1.3"/>
+<text x="1084" y="554" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="12" font-weight="700" fill="#5b6675" text-anchor="start">HOME NETWORK</text>
+<rect x="1185" y="580" width="150" height="40" rx="10" fill="#eef1f5" stroke="#cdd4de" stroke-width="1.3"/>
+<text x="1260" y="605" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13" font-weight="650" fill="#5b6675" text-anchor="middle">router · NAT</text>
+<rect x="1120" y="690" width="280" height="100" rx="14" fill="#e0f5f3" stroke="#a9e0da" stroke-width="1.3"/>
+<text x="1138" y="722" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="16" font-weight="650" fill="#1f2a37" text-anchor="start">Home node · Raspberry Pi</text>
+<text x="1138" y="746.0" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">no open ports</text>
+<text x="1138" y="765.575" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">keeps 2 tunnels</text>
+<path d="M1260,690 L1260,620" stroke="#12897f" stroke-width="1.8" fill="none"/>
+<path d="M320,580 L320,352" fill="none" stroke="#12897f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#a12897f)"/>
+<path d="M780,580 L780,352" fill="none" stroke="#12897f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#a12897f)"/>
+<path d="M1240,580 L1240,352" fill="none" stroke="#12897f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#a12897f)"/>
+<path d="M370,580 L740,352" fill="none" stroke="#12897f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#a12897f)"/>
+<path d="M830,580 L1200,352" fill="none" stroke="#12897f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#a12897f)"/>
+<path d="M1290,580 L1350,352" fill="none" stroke="#12897f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#a12897f)"/>
+<rect x="187" y="455" width="119" height="22" rx="6" fill="#f5f6f8"/>
+<text x="306" y="470" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="12.5" font-weight="600" fill="#12897f" text-anchor="end">outbound tunnel</text>
+<path d="M1260,250 C 1260,180 340,180 340,246" fill="none" stroke="#2563eb" stroke-width="2" stroke-dasharray="7 6" marker-end="url(#a2563eb)"/>
+<rect x="527" y="190" width="546" height="22" rx="6" fill="#f5f6f8"/>
+<text x="800" y="205" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="12.5" font-weight="600" fill="#2563eb" text-anchor="middle">1 · node C needs the laptop: it asks node A, which holds the laptop&#x27;s tunnel</text>
+<path d="M360,352 L360,574" fill="none" stroke="#2563eb" stroke-width="2" stroke-dasharray="7 6" marker-end="url(#a2563eb)"/>
+<rect x="372" y="425" width="224" height="22" rx="6" fill="#f5f6f8"/>
+<text x="379" y="440" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="12.5" font-weight="600" fill="#2563eb" text-anchor="start">2 · A sends it down the tunnel</text>
+<text x="60" y="868" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="14" font-weight="400" fill="#5b6675" text-anchor="start" font-style="italic">Relay choice: pick two public nodes at random, tunnel to the less busy one, so thousands of home nodes spread evenly. Dead tunnels are noticed in under a minute and redialled.</text>
+</svg>

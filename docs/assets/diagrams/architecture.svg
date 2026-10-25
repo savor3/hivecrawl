@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 860" width="1600" height="860" role="img" aria-label="Inside one HiveCrawl node"><title>Inside one HiveCrawl node</title><defs><filter id="sh" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#5a4a20" flood-opacity=".09"/></filter><marker id="ae2900c" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e2900c"/></marker><marker id="se2900c" viewBox="0 0 10 10" refX="1.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e2900c"/></marker><marker id="a2563eb" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/></marker><marker id="s2563eb" viewBox="0 0 10 10" refX="1.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/></marker><marker id="a5b6675" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5b6675"/></marker><marker id="s5b6675" viewBox="0 0 10 10" refX="1.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5b6675"/></marker><marker id="a12897f" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#12897f"/></marker><marker id="s12897f" viewBox="0 0 10 10" refX="1.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#12897f"/></marker></defs><rect width="100%" height="100%" fill="#f5f6f8"/>
+<text x="60" y="64" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="26" font-weight="750" fill="#1f2a37" text-anchor="start">Inside one HiveCrawl node</text>
+<text x="60" y="92" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="15" font-weight="400" fill="#5b6675" text-anchor="start">Four containers from docker-compose.yml. Only the node talks to the outside; everything else is private.</text>
+<text x="60" y="150" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="12" font-weight="700" fill="#5b6675" text-anchor="start">YOUR APPS</text>
+<rect x="60" y="168" width="270" height="90" rx="14" fill="#ffffff" stroke="#cdd4de" stroke-width="1.3"/>
+<text x="78" y="200" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="16" font-weight="650" fill="#1f2a37" text-anchor="start">Firecrawl SDKs · cURL</text>
+<text x="78" y="224.0" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">Python, Node, any HTTP</text>
+<path d="M330,213 L420,213" fill="none" stroke="#e2900c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#ae2900c)"/>
+<rect x="60" y="280" width="270" height="90" rx="14" fill="#ffffff" stroke="#cdd4de" stroke-width="1.3"/>
+<text x="78" y="312" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="16" font-weight="650" fill="#1f2a37" text-anchor="start">AI agents over MCP</text>
+<text x="78" y="336.0" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">Claude Code, Cursor, Desktop</text>
+<path d="M330,325 L420,325" fill="none" stroke="#e2900c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#ae2900c)"/>
+<rect x="60" y="392" width="270" height="90" rx="14" fill="#ffffff" stroke="#cdd4de" stroke-width="1.3"/>
+<text x="78" y="424" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="16" font-weight="650" fill="#1f2a37" text-anchor="start">Web UI</text>
+<text x="78" y="448.0" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">signed in with the node key</text>
+<path d="M330,437 L420,437" fill="none" stroke="#e2900c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#ae2900c)"/>
+<rect x="104" y="515" width="182" height="22" rx="6" fill="#f5f6f8"/>
+<text x="195" y="530" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="12.5" font-weight="600" fill="#e2900c" text-anchor="middle">API key on every request</text>
+<rect x="430" y="130" width="700" height="650" rx="22" fill="#fef3d9" stroke="#f5c66b" stroke-width="1.6"/>
+<rect x="454" y="152" width="403" height="22" rx="11" fill="#e2900c" fill-opacity=".14"/>
+<text x="463" y="167.5" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="11.5" font-weight="700" fill="#e2900c" text-anchor="start">hivecrawl container · Go, ~10 MB · non-root, read-only</text>
+<text x="454" y="210" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="22" font-weight="750" fill="#1f2a37" text-anchor="start">HiveCrawl node</text>
+<rect x="454" y="230" width="652" height="70" rx="12" fill="#ffffff" stroke="#f5c66b" stroke-width="1.3"/>
+<text x="474" y="260" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="16" font-weight="700" fill="#1f2a37" text-anchor="start">API</text>
+<text x="474" y="284" font-family="'JetBrains Mono', 'DejaVu Sans Mono', ui-monospace, monospace" font-size="13" font-weight="400" fill="#5b6675" text-anchor="start">/v2/search  /v2/scrape  /v2/crawl  /v2/map  /v2/extract  /v2/agent  /mcp  /v1/*</text>
+<rect x="454" y="326" width="316" height="106" rx="14" fill="#ffffff" stroke="#cdd4de" stroke-width="1.3"/>
+<text x="472" y="358" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="16" font-weight="650" fill="#1f2a37" text-anchor="start">Search orchestrator</text>
+<text x="472" y="382.0" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">cache → local → retry only</text>
+<text x="472" y="401.575" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">blocked engines → merge</text>
+<rect x="790" y="326" width="316" height="106" rx="14" fill="#ffffff" stroke="#cdd4de" stroke-width="1.3"/>
+<text x="808" y="358" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="16" font-weight="650" fill="#1f2a37" text-anchor="start">Scraper</text>
+<text x="808" y="382.0" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">Chrome fingerprint → WARP</text>
+<text x="808" y="401.575" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">→ browser → peer (opt-in)</text>
+<rect x="454" y="452" width="316" height="106" rx="14" fill="#ffffff" stroke="#cdd4de" stroke-width="1.3"/>
+<text x="472" y="484" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="16" font-weight="650" fill="#1f2a37" text-anchor="start">Crawl &amp; jobs</text>
+<text x="472" y="508.0" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">robots.txt, sitemaps,</text>
+<text x="472" y="527.575" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">webhooks, pagination</text>
+<rect x="790" y="452" width="316" height="106" rx="14" fill="#ffffff" stroke="#cdd4de" stroke-width="1.3"/>
+<text x="808" y="484" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="16" font-weight="650" fill="#1f2a37" text-anchor="start">AI (owner only)</text>
+<text x="808" y="508.0" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">extract, agent, json,</text>
+<text x="808" y="527.575" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">summary — your model</text>
+<rect x="454" y="586" width="652" height="98" rx="12" fill="#ffffff" stroke="#f5c66b" stroke-width="1.3"/>
+<text x="474" y="618" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="16" font-weight="700" fill="#1f2a37" text-anchor="start">Mesh</text>
+<text x="474" y="642.0" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">ed25519 identity + network key on every message · gossip · home-node tunnels · relay</text>
+<text x="474" y="661.575" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">proof of participation · fair-share limits · answer quality scores</text>
+<text x="454" y="740" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start" font-style="italic">Settings and keys: /data (owner-only files). No shell, no plugins, never runs programs.</text>
+<text x="1200" y="150" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="12" font-weight="700" fill="#5b6675" text-anchor="start">PRIVATE CONTAINERS</text>
+<rect x="1200" y="168" width="340" height="100" rx="14" fill="#ffffff" stroke="#cdd4de" stroke-width="1.3"/>
+<text x="1218" y="200" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="16" font-weight="650" fill="#1f2a37" text-anchor="start">SearXNG</text>
+<text x="1218" y="224.0" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">meta-search over 5 engines,</text>
+<text x="1218" y="243.575" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">plus WARP copies</text>
+<path d="M1130,218 L1194,218" fill="none" stroke="#5b6675" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#a5b6675)"/>
+<rect x="1200" y="288" width="340" height="100" rx="14" fill="#ffffff" stroke="#cdd4de" stroke-width="1.3"/>
+<text x="1218" y="320" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="16" font-weight="650" fill="#1f2a37" text-anchor="start">Cloudflare WARP</text>
+<text x="1218" y="344.0" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">SOCKS5 proxy, only inside</text>
+<text x="1218" y="363.575" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">the compose network</text>
+<path d="M1130,338 L1194,338" fill="none" stroke="#5b6675" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#a5b6675)"/>
+<rect x="1200" y="408" width="340" height="100" rx="14" fill="#ffffff" stroke="#cdd4de" stroke-width="1.3"/>
+<text x="1218" y="440" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="16" font-weight="650" fill="#1f2a37" text-anchor="start">Headless Chrome</text>
+<text x="1218" y="464.0" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">own network · nobody user ·</text>
+<text x="1218" y="483.575" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">read-only · no capabilities</text>
+<path d="M1130,458 L1194,458" fill="none" stroke="#5b6675" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#a5b6675)"/>
+<rect x="1200" y="548" width="340" height="92" rx="14" fill="#e8effd" stroke="#c3d4f7" stroke-width="1.3"/>
+<text x="1218" y="580" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="16" font-weight="650" fill="#1f2a37" text-anchor="start">Your AI provider</text>
+<text x="1218" y="604.0" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">Anthropic, OpenAI, Gemini, DeepSeek,</text>
+<text x="1218" y="623.575" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">OpenRouter, Ollama — you choose</text>
+<path d="M1130,594 L1194,594" fill="none" stroke="#2563eb" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="6 5" marker-end="url(#a2563eb)"/>
+<rect x="1200" y="676" width="340" height="100" rx="14" fill="#e0f5f3" stroke="#a9e0da" stroke-width="1.3"/>
+<text x="1218" y="708" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="16" font-weight="650" fill="#1f2a37" text-anchor="start">Other nodes</text>
+<text x="1218" y="732.0" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">signed searches, probes and</text>
+<text x="1218" y="751.575" font-family="Inter, 'Segoe UI', 'Noto Sans', system-ui, sans-serif" font-size="13.5" font-weight="400" fill="#5b6675" text-anchor="start">(if they opt in) page fetches</text>
+<path d="M1130,722 L1194,722" fill="none" stroke="#12897f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#a12897f)" marker-start="url(#s12897f)"/>
+</svg>
