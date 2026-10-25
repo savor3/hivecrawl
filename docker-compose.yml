@@ -75,6 +75,7 @@ services:
     environment:
       HC_AUTO_UPDATE: ${HC_AUTO_UPDATE:-true}
       HC_UPDATE_INTERVAL: ${HC_UPDATE_INTERVAL:-21600}
+      HC_UPDATE_REPO: ${HC_UPDATE_REPO:-} # default: https://github.com/savor3/hivecrawl.git
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - .:/hivecrawl
