@@ -164,6 +164,10 @@ type Mesh struct {
 	noIPLimits   bool
 	serveScrape  bool
 	fetchRaw     func(ctx context.Context, url string) (*types.RawPage, error)
+	// bg is the background work that writes to dataDir (see Wait); it runs
+	// under runCtx, the context Start was given.
+	bg     sync.WaitGroup
+	runCtx context.Context
 
 	mu      sync.Mutex
 	peers   map[string]*Peer
@@ -219,8 +223,11 @@ func (m *Mesh) Start(ctx context.Context) {
 		return
 	}
 	m.loadPeerCache()
-	go m.refreshProbeAnswers(ctx)
-	go func() {
+	m.mu.Lock()
+	m.runCtx = ctx
+	m.mu.Unlock()
+	m.bg.Go(func() { m.refreshProbeAnswers(ctx) })
+	m.bg.Go(func() {
 		// Learn public nodes and their load before choosing tunnel relays.
 		m.gossipOnce(ctx)
 		if m.publicURL == "" {
@@ -236,8 +243,13 @@ func (m *Mesh) Start(ctx context.Context) {
 				m.gossipOnce(ctx)
 			}
 		}
-	}()
+	})
 }
+
+// Wait blocks until the background work started by Start (and the probes it
+// launched) has stopped, after its context ends. Tests use it so nothing is
+// still writing to the data directory when it is removed.
+func (m *Mesh) Wait() { m.bg.Wait() }
 
 // Register adds the mesh endpoints to mux.
 func (m *Mesh) Register(mux *http.ServeMux) {

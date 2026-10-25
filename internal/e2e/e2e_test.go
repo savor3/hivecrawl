@@ -123,6 +123,9 @@ type testNode struct {
 
 func start(t *testing.T, ctx context.Context, name string, public bool, peers []string, key string, spec engineSpec) *testNode {
 	tn := &testNode{sx: &fakeSearx{spec: spec}, dataDir: cmp.Or(spec.dataDir, t.TempDir())}
+	// Runs after the servers below close (cleanups run in reverse), before
+	// the data dir is removed: background saves must be done by then.
+	t.Cleanup(func() { tn.node.Mesh.Wait() })
 	sxSrv := httptest.NewServer(tn.sx)
 	t.Cleanup(sxSrv.Close)
 	n := node.New(name, cache.New(cmp.Or(spec.ttl, time.Hour), 100), searx.New(sxSrv.URL, http.DefaultClient), 8)

@@ -149,9 +149,13 @@ func (m *Mesh) maybeVerify(id string, hint route) {
 		return
 	}
 	m.probing[id] = time.Now()
+	base := m.runCtx
 	m.mu.Unlock()
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), probeTimeout)
+	if base == nil {
+		base = context.Background()
+	}
+	m.bg.Go(func() {
+		ctx, cancel := context.WithTimeout(base, probeTimeout)
 		defer cancel()
 		if err := m.probe(ctx, id, hint); err != nil {
 			return
@@ -159,7 +163,7 @@ func (m *Mesh) maybeVerify(id string, hint route) {
 		m.mu.Lock()
 		m.verified[id] = time.Now().Add(verifyFor)
 		m.mu.Unlock()
-	}()
+	})
 }
 
 // probe sends a probe to id over every route we know until one answers
