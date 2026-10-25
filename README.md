@@ -32,6 +32,10 @@ app.scrape("https://en.wikipedia.org/wiki/Kerala").markdown
 
 AI agents connect over **MCP** (`/mcp`) and get search, scrape, map, crawl, extract and agent tools.
 
+<p align="center">
+  <img src="docs/assets/demo.gif" alt="HiveCrawl web UI: a search, a page scraped to markdown, and the Network page with verified peers" width="100%">
+</p>
+
 ### Why HiveCrawl instead of Firecrawl?
 
 - **Search that doesn't get blocked when you self-host.** Self-hosted Firecrawl searches from one IP (one SearXNG,
@@ -86,6 +90,7 @@ proxies on demand, or features listed under [where Firecrawl is better](#hivecra
 - [HiveCrawl vs Firecrawl](#hivecrawl-vs-firecrawl)
 - [Feature tour](#feature-tour)
 - [Quick start](#quick-start)
+- [Run a public node](docs/public-node.md) (free servers included)
 - [Signing in to the web UI](#signing-in-to-the-web-ui)
 - [AI features (LLM)](#ai-features-llm)
 - [Updating](#updating)
@@ -174,6 +179,21 @@ self-host — search that doesn't get blocked — on a cooperative network inste
 | Proxies | Firecrawl rents residential/mobile proxies on demand; HiveCrawl only has WARP and peers who opt in |
 | Extra formats and endpoints | `changeTracking`, `branding`, `/parse` file upload, browser profiles and sessions are not implemented |
 
+**Compared with other web search tools for AI agents**
+
+| | HiveCrawl | Firecrawl cloud | Tavily | Exa | SearXNG alone |
+|---|---|---|---|---|---|
+| Runs on your own machine | ✅ | ❌ hosted | ❌ hosted | ❌ hosted | ✅ |
+| Price | Free | Paid per credit | Paid per request (small free allowance) | Paid per request (small free allowance) | Free |
+| Search | Many engines, blocked ones retried via peers | Own engine | Own aggregation | Own neural index | Many engines, from one IP |
+| Scrape, crawl, map, extract | ✅ | ✅ | ✅ | Page contents only | ❌ |
+| MCP server | ✅ built in | ✅ | ✅ | ✅ | ❌ |
+| Firecrawl SDKs work unchanged | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Gets past engine blocks | ✅ WARP + other nodes | ✅ | ✅ | ✅ | ❌ |
+
+Hosted services win on uptime guarantees and their own indexes. HiveCrawl wins when you want it free, on your own
+machines, with your queries kept off third-party APIs.
+
 ## Feature tour
 
 Every screenshot below is the real UI of a running node, with live results (the API key is masked).
@@ -256,7 +276,8 @@ in. It also makes its own API key on first start (or set `HC_API_KEYS` yourself)
 | A node that talks to nobody | `HC_NETWORK=off` |
 
 **A public node** (VPS) also sets `HC_PUBLIC_URL` and sits behind a reverse proxy for TLS (the compose file binds
-to `127.0.0.1` only). Public nodes are the network's entry points, so running one helps everyone:
+to `127.0.0.1` only). Public nodes are the network's entry points, so running one helps everyone.
+[Run a public node](docs/public-node.md) is a ten-minute guide, including free servers that can host one:
 
 ```
 # Caddyfile

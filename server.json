@@ -1,0 +1,32 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.savor3/hivecrawl",
+  "title": "HiveCrawl",
+  "description": "Self-hosted, peer-to-peer web search, scraping and crawling. Firecrawl-compatible; free.",
+  "repository": {
+    "url": "https://github.com/savor3/hivecrawl",
+    "source": "github"
+  },
+  "websiteUrl": "https://github.com/savor3/hivecrawl",
+  "version": "0.4.2",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://{node_host}/mcp",
+      "variables": {
+        "node_host": {
+          "description": "Your HiveCrawl node's host name, e.g. hc.example.com (for a node on this machine, add http://localhost:3002/mcp to your client by hand)",
+          "isRequired": true
+        }
+      },
+      "headers": [
+        {
+          "name": "Authorization",
+          "description": "Bearer <your node's API key> (print it with: docker compose exec hivecrawl /hivecrawl login)",
+          "isRequired": true,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}
