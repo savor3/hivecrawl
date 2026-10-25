@@ -71,6 +71,8 @@ type Config struct {
 	Tunnels, MaxTunnels int
 	// DNS servers used for all outbound connections (peers, tunnels).
 	DNS []string
+	// UpdateCheck asks GitHub now and then whether a newer release is out.
+	UpdateCheck bool
 }
 
 func Load() (*Config, error) {
@@ -109,6 +111,7 @@ func Load() (*Config, error) {
 		DataDir:             env("HC_DATA_DIR", "./data"),
 		Tunnels:             envInt("HC_TUNNELS", 2),
 		MaxTunnels:          envInt("HC_MAX_TUNNELS", 1000),
+		UpdateCheck:         env("HC_UPDATE_CHECK", "true") == "true",
 	}
 	for i, p := range c.Peers {
 		c.Peers[i] = strings.TrimSuffix(p, "/")

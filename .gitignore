@@ -4,3 +4,4 @@ data/
 *.key
 .env.*
 !.env.example
+update.log

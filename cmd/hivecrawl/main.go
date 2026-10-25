@@ -24,6 +24,7 @@ import (
 	"hivecrawl/internal/searx"
 	"hivecrawl/internal/settings"
 	"hivecrawl/internal/types"
+	"hivecrawl/internal/update"
 )
 
 func main() {
@@ -117,12 +118,20 @@ func main() {
 		llmClient = llm.NewFor(llmCfg.Provider, llmCfg.BaseURL, llmCfg.APIKey, llmCfg.Model)
 		log.Printf("llm: %s at %s", llmCfg.Model, llmCfg.BaseURL)
 	}
+	// Only reads the public release list on GitHub; HC_UPDATE_CHECK=false turns it off.
+	var updates *update.Checker
+	if cfg.UpdateCheck {
+		updates = &update.Checker{Current: api.Version}
+	}
 	(&api.Server{Node: n, Scraper: scraper, LLM: llmClient, LLMConfig: llmCfg, DataDir: cfg.DataDir, ServeScrapes: cfg.ServeScrapes, Network: cfg.Network, CrawlMaxPages: cfg.CrawlMaxPages, CrawlMaxConcurrency: cfg.CrawlMaxConcurrency,
-		WebhookSecret: cfg.WebhookSecret, APIKeys: cfg.APIKeys, PublicURL: cfg.PublicURL, Started: time.Now()}).Register(mux)
+		WebhookSecret: cfg.WebhookSecret, APIKeys: cfg.APIKeys, PublicURL: cfg.PublicURL, Started: time.Now(), Updates: updates}).Register(mux)
 	n.Mesh.Register(mux)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	if updates != nil {
+		updates.Start(ctx)
+	}
 	n.Mesh.Start(ctx)
 
 	srv := &http.Server{Addr: cfg.Listen, Handler: mux, ReadHeaderTimeout: 10 * time.Second}

@@ -1,0 +1,80 @@
+# Publishes a release when a tag like v0.4.0 is pushed:
+#  - binaries for Linux, macOS and Windows built by the SLSA Go builder,
+#    each with SLSA level 3 provenance (*.intoto.jsonl);
+#  - a source bundle with provenance from the SLSA generic generator.
+# Nodes see the new release through their update check; ./update.sh installs it.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions: read-all
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        name: Tag must match the version in the code
+        run: |
+          version=${GITHUB_REF_NAME#v}
+          code=$(sed -n 's/^var Version = "\(.*\)"$/\1/p' internal/api/api.go)
+          if [ "$version" != "$code" ]; then
+            echo "::error::tag $GITHUB_REF_NAME but internal/api/api.go says $code"; exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes --title "HiveCrawl $GITHUB_REF_NAME"
+
+  binaries:
+    needs: prepare
+    permissions:
+      id-token: write # signs the provenance
+      contents: write # uploads to the release
+      actions: read
+    strategy:
+      matrix:
+        target: [linux-amd64, linux-arm64, darwin-amd64, darwin-arm64, windows-amd64]
+    uses: slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@v2.1.0
+    with:
+      go-version-file: go.mod
+      config-file: .slsa-goreleaser/${{ matrix.target }}.yml
+      evaluated-envs: "VERSION:${{ needs.prepare.outputs.version }}"
+      upload-assets: true
+
+  source:
+    needs: prepare
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      hashes: ${{ steps.hash.outputs.hashes }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bundle the source (what docker compose builds from)
+        run: git archive --format=tar.gz --prefix="hivecrawl-${GITHUB_REF_NAME}/" -o "hivecrawl-${GITHUB_REF_NAME}-source.tar.gz" "$GITHUB_REF_NAME"
+      - id: hash
+        run: echo "hashes=$(sha256sum hivecrawl-*-source.tar.gz | base64 -w0)" >> "$GITHUB_OUTPUT"
+      - name: Upload to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" hivecrawl-*-source.tar.gz --clobber
+
+  source-provenance:
+    needs: source
+    permissions:
+      id-token: write
+      contents: write
+      actions: read
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.1.0
+    with:
+      base64-subjects: ${{ needs.source.outputs.hashes }}
+      upload-assets: true

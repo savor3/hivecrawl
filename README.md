@@ -54,6 +54,22 @@ proxies on demand, or features listed under [where Firecrawl is better](#hivecra
 
 ---
 
+## What's new in 0.4.0
+
+- **A redesigned web UI.** A sidebar for navigation, larger search and URL bars, roomier result cards, and a new
+  sign-in screen. A graphite dark theme and a light theme, with a **Light / Dark / Match system** switch at the
+  bottom of the sidebar that remembers your choice. On a phone the sidebar becomes a top bar with scrolling tabs.
+  [See the screens](#feature-tour).
+- **Update check.** The node asks GitHub twice a day whether a newer release is out. When there is one, the
+  sidebar shows **Update available** and `/v1/status` reports it under `update`. It only reads the public release
+  list; turn it off with `HC_UPDATE_CHECK=false`.
+- **Self-update.** `./update.sh` moves the node to the newest release and rebuilds it; `./update.sh --auto` does
+  that every night by itself. If the new version doesn't start, the old one is put back.
+  [How updating works](#updating).
+- **Signed releases.** Every release ships Linux, macOS and Windows binaries and a source bundle, each with
+  [SLSA level 3](https://slsa.dev) provenance, so you can check a download was built by this repository's
+  GitHub workflow from the tagged source. Tests run on every push.
+
 ## Contents
 
 - [Why HiveCrawl instead of Firecrawl?](#why-hivecrawl-instead-of-firecrawl)
@@ -63,6 +79,7 @@ proxies on demand, or features listed under [where Firecrawl is better](#hivecra
 - [Quick start](#quick-start)
 - [Signing in to the web UI](#signing-in-to-the-web-ui)
 - [AI features (LLM)](#ai-features-llm)
+- [Updating](#updating)
 - [Architecture](#architecture)
 - [How a search is answered](#how-a-search-is-answered)
 - [The mesh](#the-mesh)
@@ -186,7 +203,11 @@ pages, mobile view and PDF/DOCX included.
 </tr>
 <tr>
 <td width="50%"><img src="docs/assets/ui/connect.png" alt="Connect page with MCP and SDK snippets"><br><sub><b>Connect</b>: MCP and SDK snippets with your URL and key</sub></td>
-<td width="50%"><img src="docs/assets/ui/search-dark.png" alt="The search page in dark mode"><br><sub>Light and <b>dark</b> themes</sub></td>
+<td width="50%"><img src="docs/assets/ui/search-light.png" alt="The search page in the light theme"><br><sub><b>Light</b> and dark themes, or follow the system</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/assets/ui/settings.png" alt="Settings with node access, the AI model form and the Updates panel"><br><sub><b>Settings</b>: node access, AI model and updates</sub></td>
+<td width="50%" align="center"><img src="docs/assets/ui/mobile.png" alt="The search page on a phone, with the sidebar as a top bar" width="60%"><br><sub>Works on a <b>phone</b></sub></td>
 </tr>
 </table>
 
@@ -278,7 +299,7 @@ docker compose exec hivecrawl /hivecrawl login
 
 The link carries the key after `#`, which browsers never send to a server; the UI saves it in that browser and
 removes it from the address bar at once. A wrong key is refused and the UI stays locked. **Settings → Node access**
-(also the key icon at the top right) has the sign-out button.
+(also the key icon at the bottom of the sidebar) has the sign-out button.
 
 Where the key comes from: `HC_API_KEYS` in `.env` if you set it, otherwise a random key the node made on first
 start and saved in its data volume (`/data/api-key`, readable only by the node). To change it, set `HC_API_KEYS`
@@ -311,6 +332,35 @@ The model is **used only for requests made with your node's API key**. Mesh peer
 (and, if you opt in, page fetches), but there is no mesh route to the model, so other people in the network can
 never spend your credits. You can also configure it with `HC_LLM_PROVIDER`, `HC_LLM_BASE_URL`, `HC_LLM_MODEL` and
 `HC_LLM_API_KEY`; settings saved in the UI take precedence.
+
+## Updating
+
+Every node checks for new releases on its own and says so in the sidebar (**Update available**) and in
+**Settings → Updates**. Installing the update happens on the machine running the node, in the `hivecrawl` folder:
+
+```bash
+./update.sh --check   # is there a newer release?
+./update.sh           # update now: switch to the newest release tag and rebuild
+./update.sh --auto    # update every night by itself (a cron job at 04:17); --no-auto turns it off
+```
+
+`update.sh` fetches the release tags from GitHub, checks out the newest one, runs `docker compose up -d --build`
+and waits for the node to answer. If it doesn't come up, it goes back to the version you had and rebuilds that.
+It refuses to run if you have changed tracked files, and it keeps your `.env` and the `hc-data` volume. Automatic
+runs are logged to `update.log`.
+
+Why the node doesn't update itself from inside its container: that would need the Docker socket, which is full
+control of your machine. Keeping updates on the host is what lets the node container stay locked down
+(see [Is it safe to run?](#is-it-safe-to-run)).
+
+**Verify a release download.** Each binary and the source bundle come with an SLSA provenance file
+(`*.intoto.jsonl`). With [slsa-verifier](https://github.com/slsa-framework/slsa-verifier):
+
+```bash
+slsa-verifier verify-artifact hivecrawl-linux-amd64 \
+  --provenance-path hivecrawl-linux-amd64.intoto.jsonl \
+  --source-uri github.com/savor3/hivecrawl --source-tag v0.4.0
+```
 
 ## Architecture
 
@@ -526,6 +576,7 @@ All settings are environment variables (see `.env.example`).
 | `HC_LLM_PROVIDER`, `HC_LLM_BASE_URL`, `HC_LLM_MODEL`, `HC_LLM_API_KEY` | — | AI model (`anthropic` or OpenAI-compatible); usually set in the UI instead |
 | `HC_SERVE_SCRAPES` | `false` | Let verified peers fetch pages through this node's IP |
 | `HC_PEER_SCRAPES` | `true` | Ask opted-in peers when every local tier is blocked |
+| `HC_UPDATE_CHECK` | `true` | Ask GitHub twice a day whether a newer release is out (reads the public release list only) |
 
 ## Measured performance
 
@@ -600,7 +651,7 @@ router for anyone to connect to.
 - **Your AI credits are yours.** The AI model is used only for requests made with your API key. No mesh route
   leads to it.
 - **Secrets stay on the node.** `/data/api-key` and `/data/settings.json` are owner-only files (`0600`). The AI
-  provider key is never sent back to the browser (the UI shows only `sk-…3d6b`). The sign-in link carries the
+  provider key is never sent back to the browser (the UI shows only the last four characters, like `sk-…ab12`). The sign-in link carries the
   key after `#`, which browsers never send to servers, and the UI removes it from the address bar at once.
 
 ### What other people can see (privacy)
@@ -609,6 +660,8 @@ router for anyone to connect to.
   node's ID. Keep `HC_MIN_RESULTS` low, or run a private network with people you trust.
 - If you enable `HC_SERVE_SCRAPES`, sites you fetch for peers see your IP, like any visit. It is off by default.
 - Webhooks go only to URLs you set yourself in your own API requests.
+- The update check sends one unauthenticated request to `api.github.com` twice a day, like any visit to a
+  GitHub page. `HC_UPDATE_CHECK=false` turns it off.
 
 ### Check it yourself
 

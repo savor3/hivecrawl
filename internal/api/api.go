@@ -25,6 +25,7 @@ import (
 	"hivecrawl/internal/scrape"
 	"hivecrawl/internal/settings"
 	"hivecrawl/internal/types"
+	"hivecrawl/internal/update"
 )
 
 //go:embed web
@@ -52,6 +53,8 @@ type Server struct {
 	APIKeys             []string
 	PublicURL           string
 	Started             time.Time
+	// Updates reports whether a newer release is out (nil: check is off).
+	Updates *update.Checker
 
 	llmCur     atomic.Pointer[llm.Client]
 	settingsMu sync.Mutex
@@ -305,6 +308,7 @@ func (s *Server) handleStatus(w http.ResponseWriter, _ *http.Request) {
 		"searxng":      s.Node.SearxStatus(),
 		"cache":        s.Node.CacheStats(),
 		"peers":        peers,
+		"update":       s.updateStatus(),
 	})
 }
 
@@ -328,8 +332,16 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 	json.NewEncoder(w).Encode(v)
 }
 
-// Version is reported to MCP clients; set at build time with -ldflags.
-var Version = "0.3.0"
+// Version is reported to MCP clients and compared with the newest release;
+// release builds set it with -ldflags.
+var Version = "0.4.0"
+
+func (s *Server) updateStatus() update.Status {
+	if s.Updates == nil {
+		return update.Status{Current: Version, Error: "update check is off (HC_UPDATE_CHECK=false)"}
+	}
+	return s.Updates.Status()
+}
 
 // llmName is the configured model, or "" when there is no LLM.
 func (s *Server) llmName() string {

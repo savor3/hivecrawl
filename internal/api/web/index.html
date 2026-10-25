@@ -55,7 +55,8 @@ input, select, textarea { font: inherit; color: var(--text); }
 code { font-family: var(--mono); font-size: .92em; }
 
 /* ---------- app shell: sidebar + content ---------- */
-.app { display: flex; min-height: 100vh; }
+/* The sidebar is sticky and one screen tall; this paints its column down tall pages. */
+.app { display: flex; min-height: 100vh; background: linear-gradient(90deg, var(--side) 0 235px, var(--border) 235px 236px, transparent 236px); }
 .side { position: sticky; top: 0; height: 100vh; flex: none; width: 236px; display: flex; flex-direction: column; gap: 2px; padding: 20px 14px 16px; background: var(--side); border-right: 1px solid var(--border); overflow-y: auto; }
 .brand { display: flex; align-items: center; gap: 10px; padding: 4px 10px 22px; font-weight: 700; font-size: 17px; letter-spacing: -.02em; white-space: nowrap; }
 .brand svg { width: 26px; height: 26px; flex: none; }
@@ -79,6 +80,10 @@ code { font-family: var(--mono); font-size: .92em; }
 .theme-seg button svg { width: 16px; height: 16px; }
 .theme-seg button:hover { color: var(--text); }
 .theme-seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent-ink); }
+.update-note { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--accent-line); border-radius: 12px; background: var(--accent-soft); color: var(--accent-ink); font-size: 13px; font-weight: 600; text-decoration: none; }
+.update-note[hidden] { display: none; }
+.update-note svg { width: 16px; height: 16px; flex: none; transform: rotate(-90deg); }
+.update-note small { display: block; font-weight: 400; font-size: 12px; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); flex: none; }
 .dot.bad { background: var(--warn); }
 .dot.idle { background: var(--faint); }
@@ -296,7 +301,7 @@ textarea.big { font-family: var(--sans); font-size: 15px; resize: vertical; min-
 
 /* ---------- small screens: sidebar becomes a top bar ---------- */
 @media (max-width: 900px) {
-  .app { flex-direction: column; }
+  .app { flex-direction: column; background: none; }
   .side { position: sticky; z-index: 20; height: auto; width: auto; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 12px 6px; border-right: 0; border-bottom: 1px solid var(--border); overflow: visible; }
   .side .brand span { display: inline; font-size: 16px; }
   .brand { padding: 0 4px; }
@@ -306,6 +311,8 @@ textarea.big { font-family: var(--sans); font-size: 15px; resize: vertical; min-
   .tab { min-height: 38px; gap: 8px; }
   .side-foot { margin: 0 0 0 auto; padding: 0; flex-direction: row; }
   .node-pill { display: none; }
+  .update-note { padding: 8px 10px; }
+  .update-note span { display: none; }
   .theme-seg { flex: none; }
   .theme-seg button { width: 32px; }
   main { padding: 20px 16px 64px; }
@@ -357,6 +364,7 @@ textarea.big { font-family: var(--sans); font-size: 15px; resize: vertical; min-
     <button class="tab" data-view="settings"><svg><use href="#i-gear"/></svg>Settings</button>
   </nav>
   <div class="side-foot">
+    <a class="update-note" id="updateNote" href="#settings" hidden><svg><use href="#i-arrow"/></svg><span>Update available<small id="updateVer"></small></span></a>
     <div class="node-pill" id="nodePill"><div class="row1"><span class="dot idle"></span><span class="label" id="nodeLabel">connecting…</span></div><span class="sub" id="nodeSub"></span></div>
     <div class="side-tools">
       <div class="theme-seg" id="themeSeg" role="group" aria-label="Theme">
@@ -543,6 +551,15 @@ textarea.big { font-family: var(--sans); font-size: 15px; resize: vertical; min-
       </div>
       <div id="llmResult" class="meta"></div>
     </div>
+    <div class="panel panel-pad" style="max-width:760px;margin-top:16px" id="updatesPanel">
+      <h3 style="margin:0 0 4px;font-size:16px">Updates</h3>
+      <p style="margin:0 0 12px;color:var(--muted);font-size:13.5px">The node checks GitHub for new releases twice a day; it only reads the public release list. Updates are installed on the machine running the node, so the node itself never gets access to Docker or your files.</p>
+      <div id="updateState" class="meta" style="margin:0 0 12px"></div>
+      <div class="lock-step" style="margin-bottom:12px"><div class="n">1</div><div class="b">Update now, in the <code>hivecrawl</code> folder:
+        <div class="cmd"><code id="updCmd">./update.sh</code><button type="button" class="btn small" data-copy="updCmd">Copy</button></div></div></div>
+      <div class="lock-step"><div class="n">2</div><div class="b">Or let it update itself every night (puts the old version back if the new one fails to start):
+        <div class="cmd"><code id="updAuto">./update.sh --auto</code><button type="button" class="btn small" data-copy="updAuto">Copy</button></div></div></div>
+    </div>
   </section>
 
   <!-- ===================== NETWORK ===================== -->
@@ -670,7 +687,7 @@ function show(view) {
   clearInterval(statusTimer);
   if (view === "network") { loadStatus(); statusTimer = setInterval(loadStatus, 5000); }
   if (view === "connect") renderConnect();
-  if (view === "settings") loadSettings();
+  if (view === "settings") { loadSettings(); loadStatus(); }
   if (view === "ai") $("aiNotice").innerHTML = config.llm ? "" : '<div class="notice">This node has no LLM configured, so Extract, Agent and the AI scrape formats are off. Configure one in <a href="#settings" onclick="show(\'settings\');return false">Settings</a> — Anthropic, OpenAI, Gemini, DeepSeek, OpenRouter, Groq and Ollama all work.</div>';
   history.replaceState(null, "", location.search + "#" + view);
 }
@@ -1176,6 +1193,7 @@ async function loadStatus() {
         "<td class='num'>" + p.asked + " / " + p.served + "</td><td class='num'>" + (p.priority || 1).toFixed(2) + "×</td>" +
         "<td class='num'>" + (p.checks ? Math.round(p.agreement * 100) + "%" : "—") + "</td><td class='num'>" + (p.latencyMs ? p.latencyMs + " ms" : "—") + "</td><td class='num'>" + since(p.onlineSince) + "</td></tr>";
     }).join("") : '<tr><td colspan="9" style="color:var(--muted)">No peers yet. Set HC_PEERS and HC_NETWORK_KEY to join a network.</td></tr>';
+    renderUpdate(s.update);
     $("nodeLabel").textContent = s.node; $("nodeSub").textContent = (s.network === "community" ? "Community" : s.network === "private" ? "Private" : "Standalone") + " · " + peers.length + (peers.length === 1 ? " peer" : " peers");
   } catch (err) {
     $("stats").innerHTML = '<div class="err">' + esc(err.message) + "</div>";
@@ -1183,6 +1201,17 @@ async function loadStatus() {
 }
 
 /* ---------- connect ---------- */
+function renderUpdate(u) {
+  if (!u) return;
+  $("updateNote").hidden = !u.available;
+  $("updateVer").textContent = u.available ? "v" + u.current + " → v" + u.latest : "";
+  $("updateNote").onclick = (e) => { e.preventDefault(); show("settings"); };
+  const cur = '<span class="badge">this node v' + esc(u.current) + "</span>";
+  $("updateState").innerHTML = u.available
+    ? cur + ' <span class="badge local">v' + esc(u.latest) + ' is out</span> <a href="' + esc(/^https:\/\/github\.com\//.test(u.url) ? u.url : "https://github.com/savor3/hivecrawl/releases") + '" target="_blank" rel="noopener">release notes</a>'
+    : u.latest ? cur + ' <span class="badge peer">up to date</span>' : cur + (u.error ? " <span>" + esc(u.error) + "</span>" : " <span>not checked yet</span>");
+}
+
 function snippetCard(icon, title, text, code) {
   return '<div class="panel panel-pad card"><h3><svg><use href="#' + icon + '"/></svg>' + title + "</h3><p>" + text + '</p><div class="copy-wrap"><pre class="code">' + hl(code) + '</pre><button class="btn small" data-code="' + esc(code) + '"><svg><use href="#i-copy"/></svg>Copy</button></div></div>';
 }

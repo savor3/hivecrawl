@@ -1,0 +1,12 @@
+# SLSA Go builder config: one target per file (see .github/workflows/release.yml).
+version: 1
+env:
+  - CGO_ENABLED=0
+flags:
+  - -trimpath
+goos: darwin
+goarch: amd64
+main: ./cmd/hivecrawl
+binary: hivecrawl-darwin-amd64
+ldflags:
+  - "-s -w -X hivecrawl/internal/api.Version={{ .Env.VERSION }}"
