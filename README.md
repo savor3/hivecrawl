@@ -33,7 +33,7 @@ app.scrape("https://en.wikipedia.org/wiki/Kerala").markdown
 AI agents connect over **MCP** (`/mcp`) and get search, scrape, map, crawl, extract and agent tools.
 
 <p align="center">
-  <img src="docs/assets/demo.gif" alt="HiveCrawl web UI: a search, a page scraped to markdown, and the Network page with verified peers" width="100%">
+  <img src="docs/assets/demo.gif" alt="HiveCrawl tour: a search answered by other nodes, scrape, map, crawl, AI extract, the network, MCP setup and Claude Code" width="100%">
 </p>
 
 ### Why HiveCrawl instead of Firecrawl?
