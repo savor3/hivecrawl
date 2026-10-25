@@ -47,6 +47,7 @@ const (
 
 const (
 	gossipFanout   = 8  // nodes greeted per gossip round
+	verifyPerRound = 16 // unverified peers probed per gossip round
 	sampleDirect   = 48 // public peers shared per hello
 	sampleTunneled = 16 // NAT'd peers shared per hello
 	maxKnown       = 5000
@@ -503,6 +504,33 @@ func (m *Mesh) gossipOnce(ctx context.Context) {
 	wg.Wait()
 	m.expire()
 	m.savePeerCache(answered)
+	m.verifyPeers()
+}
+
+// verifyPeers probes peers that haven't proved themselves yet, so their
+// status is known before they ever ask us for a search. maybeVerify keeps
+// it cheap: at most one probe per peer per probeRetry, none while verified.
+func (m *Mesh) verifyPeers() {
+	m.mu.Lock()
+	var ids []string
+	for id := range m.peers {
+		if id != m.self && !m.verifiedLocked(id) {
+			ids = append(ids, id)
+		}
+	}
+	for id := range m.tunnels {
+		if _, known := m.peers[id]; !known && !m.verifiedLocked(id) {
+			ids = append(ids, id)
+		}
+	}
+	m.mu.Unlock()
+	rand.Shuffle(len(ids), func(i, j int) { ids[i], ids[j] = ids[j], ids[i] })
+	if len(ids) > verifyPerRound {
+		ids = ids[:verifyPerRound]
+	}
+	for _, id := range ids {
+		m.maybeVerify(id, route{})
+	}
 }
 
 // learn merges a hello response from the node at url.

@@ -107,3 +107,14 @@ func TestFakeResultsFailProbe(t *testing.T) {
 		t.Fatal("node returning fake results passed the probe")
 	}
 }
+
+// Peers are checked after gossip, before they ever ask us for a search.
+func TestGossipVerifiesPeers(t *testing.T) {
+	a, _ := publicNode(t, results)
+	b, bURL := publicNode(t, results)
+	a.seeds = []string{bURL}
+	a.gossipOnce(context.Background())
+	if !waitVerified(a, b.ID()) {
+		t.Fatal("peer learned by gossip was not verified")
+	}
+}

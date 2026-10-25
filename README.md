@@ -54,6 +54,12 @@ proxies on demand, or features listed under [where Firecrawl is better](#hivecra
 
 ---
 
+## What's new in 0.4.2
+
+- **Peers are verified right away.** Each node now checks the nodes it knows
+  about with a test search shortly after it meets them, so the Network page
+  shows them as verified instead of "trial" until they first ask it for a search.
+
 ## What's new in 0.4.1
 
 - **Auto-update switch.** Settings → Updates has an **Auto-update** on/off switch (on by default).
