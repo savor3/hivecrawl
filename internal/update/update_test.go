@@ -4,7 +4,10 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestNewer(t *testing.T) {
@@ -52,5 +55,30 @@ func TestCheckNoReleases(t *testing.T) {
 	s := (&Checker{Current: "0.3.0", URL: srv.URL}).Check(context.Background())
 	if s.Available || s.Error == "" {
 		t.Fatalf("got %+v", s)
+	}
+}
+
+func TestUpdaterStatus(t *testing.T) {
+	dir := t.TempDir()
+	if ReadUpdater(dir) != nil {
+		t.Fatal("no status file must mean no updater")
+	}
+	seen := time.Now().UTC().Format(time.RFC3339)
+	os.WriteFile(filepath.Join(dir, "status.json"), []byte(`{"auto":true,"state":"idle","current":"v0.4.0","latest":"v0.4.0","seenAt":"`+seen+`","message":"up to date"}`), 0o644)
+	u := ReadUpdater(dir)
+	if u == nil || !u.Running || !u.Auto || u.State != "idle" || u.Pending {
+		t.Fatalf("got %+v", u)
+	}
+	if err := RequestCheck(dir); err != nil {
+		t.Fatal(err)
+	}
+	if !ReadUpdater(dir).Pending {
+		t.Fatal("check-now flag not seen")
+	}
+
+	old := time.Now().Add(-10 * time.Minute).UTC().Format(time.RFC3339)
+	os.WriteFile(filepath.Join(dir, "status.json"), []byte(`{"auto":true,"state":"idle","seenAt":"`+old+`"}`), 0o644)
+	if ReadUpdater(dir).Running {
+		t.Fatal("a stale status must not count as running")
 	}
 }

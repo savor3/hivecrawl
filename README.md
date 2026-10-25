@@ -60,12 +60,10 @@ proxies on demand, or features listed under [where Firecrawl is better](#hivecra
   sign-in screen. A graphite dark theme and a light theme, with a **Light / Dark / Match system** switch at the
   bottom of the sidebar that remembers your choice. On a phone the sidebar becomes a top bar with scrolling tabs.
   [See the screens](#feature-tour).
-- **Update check.** The node asks GitHub twice a day whether a newer release is out. When there is one, the
-  sidebar shows **Update available** and `/v1/status` reports it under `update`. It only reads the public release
-  list; turn it off with `HC_UPDATE_CHECK=false`.
-- **Self-update.** `./update.sh` moves the node to the newest release and rebuilds it; `./update.sh --auto` does
-  that every night by itself. If the new version doesn't start, the old one is put back.
-  [How updating works](#updating).
+- **Automatic updates, always on.** A small updater service checks for new releases every 6 hours and installs
+  them by itself; if a release doesn't start, it puts the previous version back. **Settings → Updates** shows the
+  version, the latest release, when it last checked and updated, and a **Check for updates** button. The version
+  is also at the bottom of the sidebar. [How updating works](#updating).
 - **Signed releases.** Every release ships Linux, macOS and Windows binaries and a source bundle, each with
   [SLSA level 3](https://slsa.dev) provenance, so you can check a download was built by this repository's
   GitHub workflow from the tagged source. Tests run on every push.
@@ -335,23 +333,30 @@ never spend your credits. You can also configure it with `HC_LLM_PROVIDER`, `HC_
 
 ## Updating
 
-Every node checks for new releases on its own and says so in the sidebar (**Update available**) and in
-**Settings → Updates**. Installing the update happens on the machine running the node, in the `hivecrawl` folder:
+There is nothing to do: nodes update themselves. The `updater` service in `docker-compose.yml` starts with the
+rest of the node and:
 
-```bash
-./update.sh --check   # is there a newer release?
-./update.sh           # update now: switch to the newest release tag and rebuild
-./update.sh --auto    # update every night by itself (a cron job at 04:17); --no-auto turns it off
-```
+1. checks GitHub for a newer release every 6 hours, and right away when you press **Check for updates** in
+   **Settings → Updates**;
+2. if there is one, checks out that release tag, rebuilds the node with `docker compose up -d --build` and waits
+   for it to answer;
+3. if the new version doesn't come up, goes back to the version you had and rebuilds that.
 
-`update.sh` fetches the release tags from GitHub, checks out the newest one, runs `docker compose up -d --build`
-and waits for the node to answer. If it doesn't come up, it goes back to the version you had and rebuilds that.
-It refuses to run if you have changed tracked files, and it keeps your `.env` and the `hc-data` volume. Automatic
-runs are logged to `update.log`.
+Your `.env`, settings and the `hc-data` volume are kept. The Settings page shows the version, the latest release,
+when it last checked, when it last updated, and whether auto-update is on.
 
-Why the node doesn't update itself from inside its container: that would need the Docker socket, which is full
-control of your machine. Keeping updates on the host is what lets the node container stay locked down
-(see [Is it safe to run?](#is-it-safe-to-run)).
+<p align="center"><img src="docs/assets/ui/settings.png" alt="Settings → Updates: version, latest release, last checked, last updated, auto-update on, and a Check for updates button" width="80%"></p>
+
+| You want | Set in `.env` |
+|---|---|
+| Updates installed automatically (default) | nothing |
+| Only see that an update is out | `HC_AUTO_UPDATE=false` |
+| Check more or less often | `HC_UPDATE_INTERVAL` in seconds (default `21600`, 6 h) |
+| No updater at all | remove the `updater` service from `docker-compose.yml` |
+
+Without the updater you can update by hand in the `hivecrawl` folder: `./update.sh` (or `./update.sh --check`).
+Updates come only from release tags of [savor3/hivecrawl](https://github.com/savor3/hivecrawl), and the node must
+be a git clone of it.
 
 **Verify a release download.** Each binary and the source bundle come with an SLSA provenance file
 (`*.intoto.jsonl`). With [slsa-verifier](https://github.com/slsa-framework/slsa-verifier):
@@ -576,7 +581,9 @@ All settings are environment variables (see `.env.example`).
 | `HC_LLM_PROVIDER`, `HC_LLM_BASE_URL`, `HC_LLM_MODEL`, `HC_LLM_API_KEY` | — | AI model (`anthropic` or OpenAI-compatible); usually set in the UI instead |
 | `HC_SERVE_SCRAPES` | `false` | Let verified peers fetch pages through this node's IP |
 | `HC_PEER_SCRAPES` | `true` | Ask opted-in peers when every local tier is blocked |
-| `HC_UPDATE_CHECK` | `true` | Ask GitHub twice a day whether a newer release is out (reads the public release list only) |
+| `HC_UPDATE_CHECK` | `true` | The node asks GitHub twice a day whether a newer release is out (reads the public release list only) |
+| `HC_AUTO_UPDATE` | `true` | The updater installs new releases by itself; `false` only checks |
+| `HC_UPDATE_INTERVAL` | `21600` | Seconds between the updater's checks |
 
 ## Measured performance
 
@@ -596,9 +603,11 @@ proxy ~7 MB and headless Chrome ~200–260 MB. Typical searches take ~1 s locall
 
 ## Is it safe to run?
 
-Short answer: **HiveCrawl cannot run anything on your machine, and nobody else can use it.** Everything that
-arrives from the network is treated as data, every container is locked down, and nothing reaches your home
-network. Here is exactly why, so you can check it yourself.
+Short answer: **nothing that arrives from the network — searches, pages, peers — can run anything on your
+machine, and nobody else can use your node.** Everything from the network is treated as data, every container
+that touches it is locked down, and nothing reaches your home network. The one component with more power is the
+updater, which only installs this repository's releases ([details below](#the-updater-honestly)). Here is exactly
+why, so you can check it yourself.
 
 <p align="center"><img src="docs/assets/diagrams/security.png" alt="Your machine: hivecrawl, headless Chrome, SearXNG and WARP containers, all locked down; you have full access with your key; other nodes can only send signed searches, probes and opt-in page fetches; everyone else is blocked; private and internal addresses are refused on every route" width="100%"></p>
 
@@ -623,6 +632,7 @@ network. Here is exactly why, so you can check it yourself.
 | `browser` (Chrome) | `nobody` | read-only; scratch space in memory (`tmpfs`) | all dropped, `no-new-privileges` | its own network — only the node can reach it |
 | `searxng` | drops to the `searxng` user | its config is mounted read-only | all dropped except the 4 its entrypoint needs to switch user, `no-new-privileges` | no published port |
 | `warp` | — | its own volume | all dropped, `no-new-privileges` | no published port |
+| `updater` | root (needs the Docker socket) | the node's folder and a small shared status folder | `no-new-privileges` | no published port; makes outbound calls to GitHub and image registries only |
 
 Even if a malicious page found a bug in Chrome, it would land in a container that can't write files, has no
 privileges to escalate, and can't see your network.
@@ -662,6 +672,21 @@ router for anyone to connect to.
 - Webhooks go only to URLs you set yourself in your own API requests.
 - The update check sends one unauthenticated request to `api.github.com` twice a day, like any visit to a
   GitHub page. `HC_UPDATE_CHECK=false` turns it off.
+
+### The updater, honestly
+
+The `updater` container is the one part with real power: to rebuild the node it uses the Docker socket, which
+is root-level control of the machine. That is why it is kept apart from everything that talks to the network:
+
+- It has **no ports** and reads no input from the internet or from peers. Its only input is a flag file the node
+  writes when you press **Check for updates**; the flag can make it check sooner, nothing else.
+- It runs fixed commands only (`git fetch`, `git checkout <release tag>`, `docker compose up -d --build`), and
+  only installs **release tags** of this repository.
+- The node container itself still has no Docker access, no shell and no way to run programs.
+
+What you trust by leaving it on: that a future release of this repository is safe — the same as with any app that
+updates itself. If you'd rather review each release first, set `HC_AUTO_UPDATE=false` (it then only tells you)
+or remove the service and run `./update.sh` yourself.
 
 ### Check it yourself
 

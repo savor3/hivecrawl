@@ -124,7 +124,7 @@ func main() {
 		updates = &update.Checker{Current: api.Version}
 	}
 	(&api.Server{Node: n, Scraper: scraper, LLM: llmClient, LLMConfig: llmCfg, DataDir: cfg.DataDir, ServeScrapes: cfg.ServeScrapes, Network: cfg.Network, CrawlMaxPages: cfg.CrawlMaxPages, CrawlMaxConcurrency: cfg.CrawlMaxConcurrency,
-		WebhookSecret: cfg.WebhookSecret, APIKeys: cfg.APIKeys, PublicURL: cfg.PublicURL, Started: time.Now(), Updates: updates}).Register(mux)
+		WebhookSecret: cfg.WebhookSecret, APIKeys: cfg.APIKeys, PublicURL: cfg.PublicURL, Started: time.Now(), Updates: updates, UpdateDir: cfg.UpdateDir}).Register(mux)
 	n.Mesh.Register(mux)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

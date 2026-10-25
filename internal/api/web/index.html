@@ -82,6 +82,10 @@ code { font-family: var(--mono); font-size: .92em; }
 .theme-seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent-ink); }
 .update-note { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--accent-line); border-radius: 12px; background: var(--accent-soft); color: var(--accent-ink); font-size: 13px; font-weight: 600; text-decoration: none; }
 .update-note[hidden] { display: none; }
+.node-pill .ver { color: var(--faint); font: 11.5px var(--mono); font-weight: 400; }
+.upd-grid { display: grid; grid-template-columns: max-content 1fr; gap: 10px 24px; margin: 18px 0 6px; font-size: 14px; }
+.upd-grid dt { color: var(--muted); }
+.upd-grid dd { margin: 0; font-weight: 500; }
 .update-note svg { width: 16px; height: 16px; flex: none; transform: rotate(-90deg); }
 .update-note small { display: block; font-weight: 400; font-size: 12px; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); flex: none; }
@@ -365,7 +369,7 @@ textarea.big { font-family: var(--sans); font-size: 15px; resize: vertical; min-
   </nav>
   <div class="side-foot">
     <a class="update-note" id="updateNote" href="#settings" hidden><svg><use href="#i-arrow"/></svg><span>Update available<small id="updateVer"></small></span></a>
-    <div class="node-pill" id="nodePill"><div class="row1"><span class="dot idle"></span><span class="label" id="nodeLabel">connecting…</span></div><span class="sub" id="nodeSub"></span></div>
+    <div class="node-pill" id="nodePill"><div class="row1"><span class="dot idle"></span><span class="label" id="nodeLabel">connecting…</span></div><span class="sub" id="nodeSub"></span><span class="ver" id="nodeVer"></span></div>
     <div class="side-tools">
       <div class="theme-seg" id="themeSeg" role="group" aria-label="Theme">
         <button type="button" data-theme-set="light" aria-label="Light mode" title="Light"><svg><use href="#i-sun"/></svg></button>
@@ -552,13 +556,18 @@ textarea.big { font-family: var(--sans); font-size: 15px; resize: vertical; min-
       <div id="llmResult" class="meta"></div>
     </div>
     <div class="panel panel-pad" style="max-width:760px;margin-top:16px" id="updatesPanel">
-      <h3 style="margin:0 0 4px;font-size:16px">Updates</h3>
-      <p style="margin:0 0 12px;color:var(--muted);font-size:13.5px">The node checks GitHub for new releases twice a day; it only reads the public release list. Updates are installed on the machine running the node, so the node itself never gets access to Docker or your files.</p>
-      <div id="updateState" class="meta" style="margin:0 0 12px"></div>
-      <div class="lock-step" style="margin-bottom:12px"><div class="n">1</div><div class="b">Update now, in the <code>hivecrawl</code> folder:
-        <div class="cmd"><code id="updCmd">./update.sh</code><button type="button" class="btn small" data-copy="updCmd">Copy</button></div></div></div>
-      <div class="lock-step"><div class="n">2</div><div class="b">Or let it update itself every night (puts the old version back if the new one fails to start):
-        <div class="cmd"><code id="updAuto">./update.sh --auto</code><button type="button" class="btn small" data-copy="updAuto">Copy</button></div></div></div>
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between">
+        <h3 style="margin:0;font-size:16px">Updates</h3>
+        <button class="btn primary" type="button" id="checkUpdate">Check for updates</button>
+      </div>
+      <dl class="upd-grid" id="updateGrid">
+        <dt>Version</dt><dd id="updVersion">—</dd>
+        <dt>Latest release</dt><dd id="updLatest">—</dd>
+        <dt>Last checked</dt><dd id="updChecked">—</dd>
+        <dt>Last updated</dt><dd id="updUpdated">—</dd>
+        <dt>Auto-update</dt><dd id="updAuto">—</dd>
+      </dl>
+      <div id="updateMsg" class="meta" style="margin:4px 0 0"></div>
     </div>
   </section>
 
@@ -1201,16 +1210,49 @@ async function loadStatus() {
 }
 
 /* ---------- connect ---------- */
+function ago(t) {
+  if (!t) return "never";
+  const d = new Date(t), m = Math.round((Date.now() - d) / 60000);
+  const when = m < 1 ? "just now" : m < 60 ? m + " min ago" : m < 1440 ? Math.round(m / 60) + " h ago" : Math.round(m / 1440) + " days ago";
+  return when + " · " + d.toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
+}
+const vtag = (v) => (v && v !== "none" ? (/^v?\d/.test(v) ? "v" + v.replace(/^v/, "") : v) : "");
 function renderUpdate(u) {
   if (!u) return;
-  $("updateNote").hidden = !u.available;
-  $("updateVer").textContent = u.available ? "v" + u.current + " → v" + u.latest : "";
+  const up = u.updater && u.updater.running ? u.updater : null;
+  const latest = vtag((up && up.latest) || u.latest);
+  const available = up ? !!up.available : u.available;
+  const busy = up && (up.pending || up.state === "checking" || up.state === "updating");
+  $("updateNote").hidden = !available || busy;
+  $("updateVer").textContent = available ? vtag(u.current) + " → " + latest : "";
   $("updateNote").onclick = (e) => { e.preventDefault(); show("settings"); };
-  const cur = '<span class="badge">this node v' + esc(u.current) + "</span>";
-  $("updateState").innerHTML = u.available
-    ? cur + ' <span class="badge local">v' + esc(u.latest) + ' is out</span> <a href="' + esc(/^https:\/\/github\.com\//.test(u.url) ? u.url : "https://github.com/savor3/hivecrawl/releases") + '" target="_blank" rel="noopener">release notes</a>'
-    : u.latest ? cur + ' <span class="badge peer">up to date</span>' : cur + (u.error ? " <span>" + esc(u.error) + "</span>" : " <span>not checked yet</span>");
+  $("nodeVer").textContent = vtag(u.current) + (busy ? " · updating…" : available ? " · update available" : latest ? " · up to date" : "");
+  $("updVersion").textContent = vtag(u.current);
+  $("updLatest").innerHTML = latest
+    ? esc(latest) + (available ? ' <span class="badge local">new</span>' : ' <span class="badge peer">up to date</span>')
+    : esc(u.error || "not checked yet");
+  $("updChecked").textContent = ago((up && up.checkedAt) || u.checkedAt);
+  $("updUpdated").textContent = up ? ago(up.updatedAt) : "—";
+  $("updAuto").innerHTML = up
+    ? (up.auto ? '<span class="badge peer">on</span> installs new releases by itself, and goes back if one fails to start' : '<span class="badge">off</span> checks only (HC_AUTO_UPDATE=false)')
+    : '<span class="badge">not installed</span> run this node with the docker-compose.yml from the repo to get it';
+  const msg = up && up.pending ? "Check requested…" : up && up.state === "checking" ? "Checking…" : up && up.state === "updating" ? "Installing " + esc(up.latest) + "… the page reconnects when it's back."
+    : up && up.state === "failed" ? '<span class="badge bad">failed</span> ' + esc(up.message) : up && up.message ? esc(up.message) : "";
+  $("updateMsg").innerHTML = msg;
+  $("checkUpdate").disabled = !!busy;
 }
+let updatePoll;
+$("checkUpdate").onclick = async () => {
+  $("checkUpdate").disabled = true;
+  const r = await api("/v1/update/check", { method: "POST" }).catch((e) => ({ error: e.message }));
+  if (r.update) renderUpdate(r.update);
+  if (r.error) $("updateMsg").innerHTML = '<span class="badge bad">' + esc(r.error) + "</span>";
+  // Follow the updater for a few minutes: checking, installing, back up.
+  clearInterval(updatePoll);
+  let n = 0;
+  updatePoll = setInterval(() => { if (++n > 90) clearInterval(updatePoll); loadStatus(); }, 3000);
+  setTimeout(() => ($("checkUpdate").disabled = false), 4000);
+};
 
 function snippetCard(icon, title, text, code) {
   return '<div class="panel panel-pad card"><h3><svg><use href="#' + icon + '"/></svg>' + title + "</h3><p>" + text + '</p><div class="copy-wrap"><pre class="code">' + hl(code) + '</pre><button class="btn small" data-code="' + esc(code) + '"><svg><use href="#i-copy"/></svg>Copy</button></div></div>';

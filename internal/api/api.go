@@ -55,6 +55,10 @@ type Server struct {
 	Started             time.Time
 	// Updates reports whether a newer release is out (nil: check is off).
 	Updates *update.Checker
+	// UpdateDir is the folder shared with the updater service ("": none).
+	UpdateDir string
+
+	lastCheck atomic.Int64 // unix time of the last "Check for updates"
 
 	llmCur     atomic.Pointer[llm.Client]
 	settingsMu sync.Mutex
@@ -107,6 +111,7 @@ func (s *Server) Register(mux *http.ServeMux) {
 	mux.HandleFunc("POST /v2/scrape", s.auth(s.scrapeV2))
 	mux.HandleFunc("POST /v1/scrape", s.auth(s.scrapeV2))
 	mux.HandleFunc("GET /v1/status", s.auth(s.handleStatus))
+	mux.HandleFunc("POST /v1/update/check", s.auth(s.checkUpdate))
 	mux.HandleFunc("GET /v1/config", s.handleConfig)
 	mcpH := s.auth(s.mcpHandler().ServeHTTP)
 	mux.HandleFunc("POST /mcp", mcpH)
@@ -337,10 +342,33 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 var Version = "0.4.0"
 
 func (s *Server) updateStatus() update.Status {
-	if s.Updates == nil {
-		return update.Status{Current: Version, Error: "update check is off (HC_UPDATE_CHECK=false)"}
+	st := update.Status{Current: Version, Error: "update check is off (HC_UPDATE_CHECK=false)"}
+	if s.Updates != nil {
+		st = s.Updates.Status()
 	}
-	return s.Updates.Status()
+	st.Updater = update.ReadUpdater(s.UpdateDir)
+	return st
+}
+
+// checkUpdate is the "Check for updates" button: it asks GitHub now and tells
+// the updater service to check (and install, when auto-update is on).
+func (s *Server) checkUpdate(w http.ResponseWriter, r *http.Request) {
+	now := time.Now().Unix()
+	if last := s.lastCheck.Load(); now-last < 15 {
+		writeJSON(w, http.StatusTooManyRequests, map[string]any{"success": false, "error": "checked a moment ago; try again in a few seconds"})
+		return
+	}
+	s.lastCheck.Store(now)
+	if s.Updates != nil {
+		s.Updates.Check(r.Context())
+	}
+	if update.ReadUpdater(s.UpdateDir) != nil {
+		if err := update.RequestCheck(s.UpdateDir); err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]any{"success": false, "error": err.Error()})
+			return
+		}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"success": true, "update": s.updateStatus()})
 }
 
 // llmName is the configured model, or "" when there is no LLM.

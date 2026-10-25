@@ -13,8 +13,10 @@ services:
       HC_SEARXNG_URL: http://searxng:8080
       HC_WARP_SOCKS: warp:40000
       HC_BROWSER: browser:9222
+      HC_UPDATE_DIR: /update
     volumes:
       - hc-data:/data # node identity key: keep it, or the node gets a new ID
+      - hc-update:/update # status from the updater, and the "check now" flag
     # Bound to localhost: put Caddy/nginx in front for HTTPS on a public server.
     # A home node needs no published port at all; it only dials out.
     ports:
@@ -62,6 +64,25 @@ services:
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
 
+  # Keeps the node on the newest release: checks every 6 hours and when you
+  # press "Check for updates", rebuilds, and rolls back if a release fails to
+  # start. It needs the Docker socket to rebuild the other containers, so it
+  # gets nothing else: no ports, and its only input is a flag file the node
+  # writes. Set HC_AUTO_UPDATE=false to only check, or remove this service.
+  updater:
+    build: ./deploy/updater
+    restart: unless-stopped
+    environment:
+      HC_AUTO_UPDATE: ${HC_AUTO_UPDATE:-true}
+      HC_UPDATE_INTERVAL: ${HC_UPDATE_INTERVAL:-21600}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - .:/hivecrawl
+      - hc-update:/update
+    dns: [1.1.1.1, 8.8.8.8]
+    mem_limit: 256m
+    security_opt: [no-new-privileges:true]
+
   # Headless Chrome for JavaScript pages, actions and screenshots. It is on
   # its own network with only the hivecrawl node, and the node refuses any
   # request a page makes to internal addresses.
@@ -87,3 +108,4 @@ networks:
 volumes:
   hc-data:
   warp-data:
+  hc-update:

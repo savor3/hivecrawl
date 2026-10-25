@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -27,6 +29,8 @@ type Status struct {
 	URL       string    `json:"url,omitempty"`
 	CheckedAt time.Time `json:"checkedAt,omitzero"`
 	Error     string    `json:"error,omitempty"`
+	// Updater is the updater service's report; nil when it isn't installed.
+	Updater *Updater `json:"updater,omitempty"`
 }
 
 // Checker polls the releases endpoint every Interval.
@@ -170,4 +174,54 @@ func parse(v string) ([3]int, bool) {
 		out[i] = n
 	}
 	return out, true
+}
+
+// Updater is what the updater service (deploy/updater) reports in the folder
+// it shares with the node.
+type Updater struct {
+	Running   bool   `json:"running"` // it wrote its status in the last 3 minutes
+	Auto      bool   `json:"auto"`
+	Available bool   `json:"available"` // a newer release than the running one is out
+	State     string `json:"state"`     // starting, checking, updating, idle or failed
+	Current   string `json:"current,omitempty"`
+	Latest    string `json:"latest,omitempty"`
+	CheckedAt string `json:"checkedAt,omitempty"`
+	UpdatedAt string `json:"updatedAt,omitempty"`
+	Message   string `json:"message,omitempty"`
+	Pending   bool   `json:"pending,omitempty"` // a check was asked for and has not started yet
+}
+
+// ReadUpdater returns the updater's status from dir, or nil when there is
+// no updater (no status file).
+func ReadUpdater(dir string) *Updater {
+	if dir == "" {
+		return nil
+	}
+	b, err := os.ReadFile(filepath.Join(dir, "status.json"))
+	if err != nil {
+		return nil
+	}
+	var u struct {
+		Updater
+		SeenAt string `json:"seenAt"`
+	}
+	if json.Unmarshal(b, &u) != nil {
+		return nil
+	}
+	if t, err := time.Parse(time.RFC3339, u.SeenAt); err == nil {
+		u.Updater.Running = time.Since(t) < 3*time.Minute
+	}
+	if _, err := os.Stat(filepath.Join(dir, "check-now")); err == nil {
+		u.Updater.Pending = true
+	}
+	return &u.Updater
+}
+
+// RequestCheck asks the updater to check (and, with auto-update on, install)
+// now. The updater picks it up within a few seconds.
+func RequestCheck(dir string) error {
+	if dir == "" {
+		return fmt.Errorf("no updater is set up for this node")
+	}
+	return os.WriteFile(filepath.Join(dir, "check-now"), []byte(time.Now().UTC().Format(time.RFC3339)), 0o644)
 }

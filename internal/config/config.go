@@ -73,6 +73,8 @@ type Config struct {
 	DNS []string
 	// UpdateCheck asks GitHub now and then whether a newer release is out.
 	UpdateCheck bool
+	// UpdateDir is shared with the updater service (status and "check now").
+	UpdateDir string
 }
 
 func Load() (*Config, error) {
@@ -112,6 +114,7 @@ func Load() (*Config, error) {
 		Tunnels:             envInt("HC_TUNNELS", 2),
 		MaxTunnels:          envInt("HC_MAX_TUNNELS", 1000),
 		UpdateCheck:         env("HC_UPDATE_CHECK", "true") == "true",
+		UpdateDir:           env("HC_UPDATE_DIR", ""),
 	}
 	for i, p := range c.Peers {
 		c.Peers[i] = strings.TrimSuffix(p, "/")
