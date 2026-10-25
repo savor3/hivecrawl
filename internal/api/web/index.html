@@ -1233,9 +1233,18 @@ function renderUpdate(u) {
     : esc(u.error || "not checked yet");
   $("updChecked").textContent = ago((up && up.checkedAt) || u.checkedAt);
   $("updUpdated").textContent = up ? ago(up.updatedAt) : "—";
-  $("updAuto").innerHTML = up
-    ? (up.auto ? '<span class="badge peer">on</span> installs new releases by itself, and goes back if one fails to start' : '<span class="badge">off</span> checks only (HC_AUTO_UPDATE=false)')
-    : '<span class="badge">not installed</span> run this node with the docker-compose.yml from the repo to get it';
+  if (up) {
+    $("updAuto").innerHTML = '<label class="toggle"><input type="checkbox" id="autoToggle"' + (up.auto ? " checked" : "") + '><span class="sw"></span>' +
+      (up.auto ? "On — installs new releases by itself, and goes back if one fails to start" : "Off — only tells you when a release is out") + "</label>";
+    $("autoToggle").onchange = async (e) => {
+      const r = await api("/v1/update/auto", { method: "PUT", body: JSON.stringify({ enabled: e.target.checked }) }).catch((err) => ({ error: err.message }));
+      if (r.error) { $("updateMsg").innerHTML = '<span class="badge bad">' + esc(r.error) + "</span>"; e.target.checked = !e.target.checked; return; }
+      toast(e.target.checked ? "Auto-update on" : "Auto-update off");
+      setTimeout(loadStatus, 6000);
+    };
+  } else {
+    $("updAuto").innerHTML = '<span class="badge">not installed</span> run this node with the docker-compose.yml from the repo to get it';
+  }
   const msg = up && up.pending ? "Check requested…" : up && up.state === "checking" ? "Checking…" : up && up.state === "updating" ? "Installing " + esc(up.latest) + "… the page reconnects when it's back."
     : up && up.state === "failed" ? '<span class="badge bad">failed</span> ' + esc(up.message) : up && up.message ? esc(up.message) : "";
   $("updateMsg").innerHTML = msg;

@@ -14,7 +14,15 @@ set -u
 REPO=/hivecrawl
 STATE=/update
 INTERVAL=${HC_UPDATE_INTERVAL:-21600}
-AUTO=${HC_AUTO_UPDATE:-true}
+# On by default; HC_AUTO_UPDATE=false, or the switch in Settings (which
+# writes /update/auto-update), turns it off.
+AUTO_ENV=${HC_AUTO_UPDATE:-true}
+auto() {
+  AUTO=$AUTO_ENV
+  [ -f "$STATE/auto-update" ] && AUTO=$(cat "$STATE/auto-update")
+  [ "$AUTO" = false ] || AUTO=true
+}
+auto
 
 # docker compose resolves paths on the host, so the repo must be reachable
 # here at its host path: find it from this container's own mount.
@@ -47,6 +55,7 @@ write_status() {
 }
 
 check() {
+  auto
   state=checking; write_status
   out=$(cd "$HOST_DIR" && ./update.sh --status 2>&1)
   checked=$(now)
@@ -65,7 +74,7 @@ check() {
       state=failed; message=$(printf '%s\n' "$out" | tail -n 1)
     fi
   elif [ "$available" = yes ]; then
-    state=idle; message="$latest is out; auto-update is off (HC_AUTO_UPDATE=false)"
+    state=idle; message="$latest is out; auto-update is off"
   else
     state=idle; message="up to date"
   fi
@@ -81,6 +90,9 @@ while :; do
   if [ -f "$STATE/check-now" ]; then
     rm -f "$STATE/check-now"
     check; last=$(date +%s)
+  elif [ -f "$STATE/auto-changed" ]; then
+    rm -f "$STATE/auto-changed"
+    auto; write_status
   elif [ $(( $(date +%s) - last )) -ge "$INTERVAL" ]; then
     check; last=$(date +%s)
   elif [ $(( $(date +%s) % 60 )) -lt 5 ]; then

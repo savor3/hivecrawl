@@ -217,6 +217,22 @@ func ReadUpdater(dir string) *Updater {
 	return &u.Updater
 }
 
+// SetAuto turns automatic installs on or off; the updater applies it within
+// a few seconds and keeps it across restarts.
+func SetAuto(dir string, on bool) error {
+	if dir == "" {
+		return fmt.Errorf("no updater is set up for this node")
+	}
+	v := "false"
+	if on {
+		v = "true"
+	}
+	if err := os.WriteFile(filepath.Join(dir, "auto-update"), []byte(v), 0o644); err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(dir, "auto-changed"), nil, 0o644)
+}
+
 // RequestCheck asks the updater to check (and, with auto-update on, install)
 // now. The updater picks it up within a few seconds.
 func RequestCheck(dir string) error {

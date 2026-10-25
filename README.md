@@ -54,6 +54,11 @@ proxies on demand, or features listed under [where Firecrawl is better](#hivecra
 
 ---
 
+## What's new in 0.4.1
+
+- **Auto-update switch.** Settings → Updates has an **Auto-update** on/off switch (on by default).
+- The updater now refreshes itself after installing a release.
+
 ## What's new in 0.4.0
 
 - **A redesigned web UI.** A sidebar for navigation, larger search and URL bars, roomier result cards, and a new
@@ -343,14 +348,15 @@ rest of the node and:
 3. if the new version doesn't come up, goes back to the version you had and rebuilds that.
 
 Your `.env`, settings and the `hc-data` volume are kept. The Settings page shows the version, the latest release,
-when it last checked, when it last updated, and whether auto-update is on.
+when it last checked, when it last updated, and an **Auto-update** switch — on by default; turn it off if
+you'd rather install updates yourself.
 
 <p align="center"><img src="docs/assets/ui/settings.png" alt="Settings → Updates: version, latest release, last checked, last updated, auto-update on, and a Check for updates button" width="80%"></p>
 
 | You want | Set in `.env` |
 |---|---|
 | Updates installed automatically (default) | nothing |
-| Only see that an update is out | `HC_AUTO_UPDATE=false` |
+| Only see that an update is out | turn off **Auto-update** in Settings → Updates (or `HC_AUTO_UPDATE=false`) |
 | Check more or less often | `HC_UPDATE_INTERVAL` in seconds (default `21600`, 6 h) |
 | No updater at all | remove the `updater` service from `docker-compose.yml` |
 

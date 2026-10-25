@@ -82,3 +82,16 @@ func TestUpdaterStatus(t *testing.T) {
 		t.Fatal("a stale status must not count as running")
 	}
 }
+
+func TestSetAuto(t *testing.T) {
+	dir := t.TempDir()
+	if err := SetAuto(dir, false); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(filepath.Join(dir, "auto-update")); string(b) != "false" {
+		t.Fatalf("auto-update = %q", b)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "auto-changed")); err != nil {
+		t.Fatal("the updater is not told about the change")
+	}
+}

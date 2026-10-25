@@ -90,6 +90,12 @@ previous=$(git_ rev-parse HEAD)
 git_ -c advice.detachedHead=false checkout --quiet "$latest"
 if up >/dev/null 2>&1 && healthy; then
   echo "$(date -u '+%F %T') now running $latest"
+  # The updater can't replace itself while it runs: a one-off helper
+  # container rebuilds it (a no-op when the updater didn't change).
+  if [ -n "${HC_UPDATER:-}" ]; then
+    docker run -d --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD:$PWD" -w "$PWD" \
+      docker:28.5.2-cli compose up -d --build --no-deps updater >/dev/null 2>&1 || true
+  fi
   exit 0
 fi
 echo "$(date -u '+%F %T') $latest did not start; went back to $current" >&2

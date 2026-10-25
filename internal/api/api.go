@@ -112,6 +112,7 @@ func (s *Server) Register(mux *http.ServeMux) {
 	mux.HandleFunc("POST /v1/scrape", s.auth(s.scrapeV2))
 	mux.HandleFunc("GET /v1/status", s.auth(s.handleStatus))
 	mux.HandleFunc("POST /v1/update/check", s.auth(s.checkUpdate))
+	mux.HandleFunc("PUT /v1/update/auto", s.auth(s.setAutoUpdate))
 	mux.HandleFunc("GET /v1/config", s.handleConfig)
 	mcpH := s.auth(s.mcpHandler().ServeHTTP)
 	mux.HandleFunc("POST /mcp", mcpH)
@@ -339,7 +340,7 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 
 // Version is reported to MCP clients and compared with the newest release;
 // release builds set it with -ldflags.
-var Version = "0.4.0"
+var Version = "0.4.1"
 
 func (s *Server) updateStatus() update.Status {
 	st := update.Status{Current: Version, Error: "update check is off (HC_UPDATE_CHECK=false)"}
@@ -348,6 +349,26 @@ func (s *Server) updateStatus() update.Status {
 	}
 	st.Updater = update.ReadUpdater(s.UpdateDir)
 	return st
+}
+
+// setAutoUpdate is the auto-update switch in Settings: {"enabled": bool}.
+func (s *Server) setAutoUpdate(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Enabled *bool `json:"enabled"`
+	}
+	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<10)).Decode(&req); err != nil || req.Enabled == nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"success": false, "error": `send {"enabled": true} or {"enabled": false}`})
+		return
+	}
+	if update.ReadUpdater(s.UpdateDir) == nil {
+		writeJSON(w, http.StatusConflict, map[string]any{"success": false, "error": "no updater is running for this node"})
+		return
+	}
+	if err := update.SetAuto(s.UpdateDir, *req.Enabled); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"success": false, "error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"success": true, "update": s.updateStatus()})
 }
 
 // checkUpdate is the "Check for updates" button: it asks GitHub now and tells
