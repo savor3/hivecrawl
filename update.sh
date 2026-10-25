@@ -64,7 +64,8 @@ echo "$(date -u '+%F %T') updating $current -> $latest"
 previous=$(git rev-parse HEAD)
 git -c advice.detachedHead=false checkout --quiet "$latest"
 
-port=$(sed -n 's/^HC_HOST_PORT=//p' .env 2>/dev/null | tail -n 1)
+# The host port docker compose publishes (HC_PORT in .env, 3002 by default).
+port=$(sed -n 's/^HC_PORT=//p' .env 2>/dev/null | tail -n 1 | tr -d '"'"'"' ')
 port=${port:-3002}
 healthy() {
   i=0
