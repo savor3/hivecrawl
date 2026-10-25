@@ -206,7 +206,7 @@ Requirements: Docker with Compose.
 
 ```bash
 git clone https://github.com/savor3/hivecrawl && cd hivecrawl
-cp .env.example .env        # edit it (see comments); generate secrets with `openssl rand -hex 24`
+sed "s/^SEARXNG_SECRET=$/SEARXNG_SECRET=$(openssl rand -hex 32)/" .env.example > .env   # .env with a fresh SearXNG secret
 docker compose up -d --build
 ```
 

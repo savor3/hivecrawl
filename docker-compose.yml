@@ -31,7 +31,7 @@ services:
     image: searxng/searxng:latest
     restart: unless-stopped
     environment:
-      SEARXNG_SECRET: ${SEARXNG_SECRET:?set SEARXNG_SECRET in .env}
+      SEARXNG_SECRET: ${SEARXNG_SECRET:?set SEARXNG_SECRET in .env, e.g. SEARXNG_SECRET=$(openssl rand -hex 32)}
     volumes:
       - ./deploy/searxng/settings.yml:/etc/searxng/settings.yml:ro
     # Engine lookups go to public resolvers, not the ISP / cloud resolver.
