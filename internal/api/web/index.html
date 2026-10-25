@@ -1126,7 +1126,7 @@ function renderConnect() {
   $("cKey").value = apiKey || "(not signed in)";
   const k = keyShown();
   $("connectCards").innerHTML =
-    snippetCard("i-bot", "Claude Code", "Adds HiveCrawl's tools to Claude Code: search, scrape, map, crawl, crawl status, extract and agent.", "claude mcp add --transport http hivecrawl " + origin + "/mcp \\\n  --header \"Authorization: Bearer " + k + "\"") +
+    snippetCard("i-bot", "Claude Code", "Adds HiveCrawl's tools to Claude Code in every project: search, scrape, map, crawl, crawl status, extract and agent. Start a new session afterwards.", "claude mcp add -s user --transport http hivecrawl " + origin + "/mcp \\\n  --header \"Authorization: Bearer " + k + "\"") +
     snippetCard("i-bot", "Claude Desktop · Cursor · other MCP clients", "Streamable HTTP MCP server with the same 7 tools. Paste into the client's MCP config.", JSON.stringify({ mcpServers: { hivecrawl: { type: "http", url: origin + "/mcp", headers: { Authorization: "Bearer " + k } } } }, null, 2)) +
     snippetCard("i-code", "Python · Firecrawl SDK", "pip install firecrawl-py, then point it at this node.", 'from firecrawl import Firecrawl\n\napp = Firecrawl(api_key="' + k + '", api_url="' + origin + '")\nprint(app.search("kerala tourism", limit=5))\nprint(app.scrape("https://en.wikipedia.org/wiki/Kerala").markdown)') +
     snippetCard("i-code", "Node · Firecrawl SDK", "npm i @mendable/firecrawl-js, same API as Firecrawl.", 'import Firecrawl from "@mendable/firecrawl-js";\n\nconst app = new Firecrawl({ apiKey: "' + k + '", apiUrl: "' + origin + '" });\nconsole.log(await app.search("kerala tourism", { limit: 5 }));');

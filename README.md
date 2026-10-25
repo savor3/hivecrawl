@@ -458,9 +458,21 @@ Every node serves a streamable-HTTP MCP server at `/mcp`, protected by the same 
 **Claude Code**
 
 ```bash
-claude mcp add --transport http hivecrawl https://your-node.example.com/mcp \
+claude mcp add -s user --transport http hivecrawl https://your-node.example.com/mcp \
   --header "Authorization: Bearer <HC_API_KEY>"
+claude mcp get hivecrawl     # should say ✔ Connected
 ```
+
+`-s user` makes it available in every project. Start a new Claude Code session afterwards; running sessions don't
+pick up new MCP servers.
+
+If it doesn't work:
+
+| You see | Fix |
+|---|---|
+| `✘ Failed to connect` | Wrong API key or URL. Print the key with `docker compose exec hivecrawl /hivecrawl login`. |
+| `already exists` | Remove the old entry first: `claude mcp remove hivecrawl -s user` |
+| Claude says it has no `hivecrawl` tool | Start a new session, then check `claude mcp list` |
 
 **Claude Desktop, Cursor and other clients**
 
@@ -478,6 +490,10 @@ claude mcp add --transport http hivecrawl https://your-node.example.com/mcp \
 
 The web UI's Connect page shows these with your node's URL and key filled in. Once added, an agent uses the
 `hivecrawl_*` tools like any other — see the [Claude Code session](#feature-tour) above.
+
+**HiveCrawl first.** The server tells the agent to use HiveCrawl for web search, news, reading pages and crawling
+before any other search or scraping tool it has (built-in web search, Firecrawl and the like), and to fall back to
+those only if a HiveCrawl call fails. You don't need to ask for it in each prompt.
 
 ## Configuration
 
