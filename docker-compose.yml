@@ -5,7 +5,9 @@ services:
   hivecrawl:
     build: .
     restart: unless-stopped
-    env_file: .env
+    env_file:
+      - path: .env
+        required: false # every setting has a default
     environment:
       HC_HOST_PORT: ${HC_PORT:-3002} # for the printed sign-in link
       HC_SEARXNG_URL: http://searxng:8080
@@ -30,8 +32,14 @@ services:
   searxng:
     image: searxng/searxng:latest
     restart: unless-stopped
+    # SearXNG refuses to start without a secret. It is only reachable inside
+    # the compose network, so when .env sets none, make a random one per start.
+    entrypoint:
+      - /bin/sh
+      - -c
+      - export SEARXNG_SECRET="$${SEARXNG_SECRET:-$$(od -An -N32 -tx1 /dev/urandom | tr -d ' \n')}"; exec /usr/local/searxng/entrypoint.sh
     environment:
-      SEARXNG_SECRET: ${SEARXNG_SECRET:?set SEARXNG_SECRET in .env, e.g. SEARXNG_SECRET=$(openssl rand -hex 32)}
+      SEARXNG_SECRET: ${SEARXNG_SECRET:-}
     volumes:
       - ./deploy/searxng/settings.yml:/etc/searxng/settings.yml:ro
     # Engine lookups go to public resolvers, not the ISP / cloud resolver.

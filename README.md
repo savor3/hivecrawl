@@ -206,7 +206,7 @@ Requirements: Docker with Compose.
 
 ```bash
 git clone https://github.com/savor3/hivecrawl && cd hivecrawl
-sed "s/^SEARXNG_SECRET=$/SEARXNG_SECRET=$(openssl rand -hex 32)/" .env.example > .env   # .env with a fresh SearXNG secret
+cp .env.example .env        # optional: every setting has a default
 docker compose up -d --build
 ```
 
@@ -214,7 +214,7 @@ Then [sign in to the web UI](#signing-in-to-the-web-ui) at `http://localhost:300
 images), Scrape, Map, Crawl and AI playgrounds with ready-to-copy cURL, Python and Node snippets, a Network page,
 Settings and a Connect page with MCP setup.
 
-**That's all it takes to join the network.** The only required setting is `SEARXNG_SECRET`. A node with no
+**That's all it takes to join the network.** There is nothing you have to set. A node with no
 network settings joins the public **community network** on its own: it contacts the built-in public nodes, finds
 the rest through gossip, and — if it's a home machine — opens its tunnels. No keys to exchange, no peers to type
 in. It also makes its own API key on first start (or set `HC_API_KEYS` yourself).
@@ -492,7 +492,7 @@ All settings are environment variables (see `.env.example`).
 | `HC_NETWORK_KEY` | — | Your own private network's shared key (≥16 chars) |
 | `HC_PUBLIC_URL` | — | This node's public HTTPS URL. Empty = home node (tunnels out) |
 | `HC_PEERS` | community nodes | Extra public node URLs to contact first; gossip and the saved peer list find the rest |
-| `SEARXNG_SECRET` | — | SearXNG's secret key |
+| `SEARXNG_SECRET` | random on each start | SearXNG's secret key |
 | `HC_MIN_RESULTS` | `8` | Fewer local results than this triggers WARP and peers |
 | `HC_WARP` | `true` | Retry blocked engines through Cloudflare WARP |
 | `HC_ENGINES` | `google cse,brave,duckduckgo,startpage,mojeek` | Direct engines; must match `deploy/searxng/settings.yml` |
