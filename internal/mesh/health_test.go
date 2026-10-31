@@ -12,6 +12,16 @@ func TestHealth(t *testing.T) {
 	if good < 95 || slow >= good || failing >= 60 {
 		t.Fatalf("good=%d slow=%d failing=%d", good, slow, failing)
 	}
+	// Never asked, but it reports its own totals: scored from those.
+	busy := health(&Peer{Res: &Resources{Searches: 1000, Failed: 1, Cores: 1, Load: 0.5, Engines: 100}})
+	overloaded := health(&Peer{Res: &Resources{Searches: 1000, Failed: 400, Cores: 1, Load: 2.5, Engines: 100}})
+	if busy < 95 || overloaded >= 60 {
+		t.Fatalf("reported: healthy=%d overloaded=%d", busy, overloaded)
+	}
+	// Once this node has asked it enough, its own record wins.
+	if h := health(&Peer{OK: 2, Fail: 8, Res: &Resources{Searches: 1000, Engines: 100}}); h >= 60 {
+		t.Fatalf("own record of failures ignored: %d", h)
+	}
 	// Missing signals are left out rather than counted as zero.
 	if h := health(&Peer{OK: 10}); h != 100 {
 		t.Fatalf("only answers known, all answered: got %d", h)

@@ -52,7 +52,7 @@ func HostResources() Resources {
 
 // Health weights: how a peer scores, from what this node saw of it.
 const (
-	healthAnswers   = 0.4 // share of our searches it answered
+	healthAnswers   = 0.4 // share of searches it answered
 	healthLatency   = 0.2 // full marks up to goodLatencyMs, none at badLatencyMs
 	healthAgreement = 0.2 // its results match other routes (not junk)
 	healthUnblocked = 0.2 // share of its engines not blocked
@@ -61,14 +61,24 @@ const (
 	badLatencyMs  = 3000
 	// defaultEngines is assumed for nodes too old to report their count.
 	defaultEngines = 10
+	// minAsked is how many searches this node must have sent a peer before
+	// its own record of them outweighs the peer's reported totals.
+	minAsked = 5
 )
 
-// health scores a peer 0..100, or -1 while we have no record of it (never
-// asked it a search). Signals with no data yet are left out and the
-// remaining weights rescaled, so a new peer is not marked down for them.
+// health scores a peer 0..100, or -1 while there is nothing to go on.
+//
+// The best evidence is this node's own record of searches it sent the
+// peer. Nodes that answer from their own engines rarely ask each other,
+// so without that record the score uses what the peer reports about
+// itself in gossip: the share of its searches that did not fail, and how
+// busy its machine is in place of latency. Signals with no data yet are
+// left out and the remaining weights rescaled, so a peer is not marked
+// down for them.
 func health(p *Peer) int {
 	n := p.OK + p.Fail
-	if n == 0 {
+	reported := p.Res != nil && p.Res.Searches > 0
+	if n == 0 && !reported {
 		return -1
 	}
 	var sum, w float64
@@ -76,9 +86,17 @@ func health(p *Peer) int {
 		sum += weight * min(max(v, 0), 1)
 		w += weight
 	}
-	add(healthAnswers, float64(p.OK)/float64(n))
-	if p.LatencyMs > 0 {
+	if n >= minAsked || !reported {
+		add(healthAnswers, float64(p.OK)/float64(n))
+	} else {
+		add(healthAnswers, 1-float64(p.Res.Failed)/float64(p.Res.Searches))
+	}
+	switch {
+	case p.LatencyMs > 0:
 		add(healthLatency, 1-float64(p.LatencyMs-goodLatencyMs)/float64(badLatencyMs-goodLatencyMs))
+	case p.Res != nil && p.Res.Cores > 0:
+		// Full marks up to fully busy, none at twice its cores.
+		add(healthLatency, 2-p.Res.Load/float64(p.Res.Cores))
 	}
 	if p.Checks > 0 {
 		add(healthAgreement, p.Agreement)

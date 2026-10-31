@@ -60,6 +60,13 @@ proxies on demand, or features listed under [where Firecrawl is better](#hivecra
 
 ---
 
+## What's new in 0.4.12
+
+- **Health scores right after a restart.** A peer this node has not sent searches to (nodes that answer from their own
+  engines rarely need each other) used to show "new" until it had. It is now scored from what it reports about
+  itself: the share of its searches that did not fail, how busy its machine is, and its blocked engines. Once this
+  node has sent it a few searches, its own record counts instead.
+
 ## What's new in 0.4.11
 
 - **Search totals that last.** Each node keeps how many searches it has answered and how many failed in

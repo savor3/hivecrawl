@@ -1278,12 +1278,23 @@ $("llmRemove").onclick = async () => {
 /* ---------- pool & health ---------- */
 // Health is scored by this node from what it saw of each peer (see
 // internal/mesh/health.go): answers 40%, latency 20%, agreement 20%,
-// unblocked engines 20%. -1 means it has not been asked anything yet.
+// unblocked engines 20%; peers this node has not asked are scored from
+// their own reported totals and load. -1 means nothing to go on yet.
+// answeredPct is the share of searches a peer answered: of ours once we
+// have asked it a few (as the score does), else of all it reports.
+function answeredPct(p) {
+  const n = p.ok + p.fail, r = p.res || {};
+  if (n >= 5 || !r.searches) return n ? Math.round((p.ok / n) * 100) : 0;
+  return Math.round((1 - (r.failed || 0) / r.searches) * 100);
+}
 function healthBadge(p) {
   const h = p.health ?? -1;
-  if (h < 0) return '<span class="hscore new" title="Not asked any searches yet">new</span>';
+  if (h < 0) return '<span class="hscore new" title="No searches yet: not asked any, and it has not reported its own">new</span>';
   const cls = h >= 85 ? "good" : h >= 60 ? "fair" : "poor";
-  const tip = (h >= 85 ? "Healthy" : h >= 60 ? "Fair" : "Poor") + ": answered " + p.ok + "/" + (p.ok + p.fail) + (p.latencyMs ? ", " + p.latencyMs + " ms" : "") +
+  const r = p.res || {}, own = p.ok + p.fail >= 5 || !r.searches;
+  const tip = (h >= 85 ? "Healthy" : h >= 60 ? "Fair" : "Poor") + ": " +
+    (own ? "answered " + p.ok + "/" + (p.ok + p.fail) + " of our searches" : "answered " + (r.searches - (r.failed || 0)).toLocaleString() + "/" + r.searches.toLocaleString() + " searches (its own count)") +
+    (p.latencyMs ? ", " + p.latencyMs + " ms" : r.cores ? ", " + Math.round((r.load / r.cores) * 100) + "% busy" : "") +
     (p.checks ? ", " + Math.round(p.agreement * 100) + "% agreement" : "") + ", " + (p.blocked || []).length + " engines blocked";
   return '<span class="hscore ' + cls + '" title="' + esc(tip) + '">' + h + "</span>";
 }
@@ -1329,8 +1340,8 @@ function renderPool(s, peers) {
   const worst = [...scored].filter((p) => p.health < 85).sort((a, b) => a.health - b.health).slice(0, 5);
   const blockedNodes = nodes.filter((n) => (n.blocked || []).length).sort((a, b) => b.blocked.length - a.blocked.length).slice(0, 5);
   $("ranks").innerHTML =
-    list("Best performing", best, (p) => p.health + " · " + (p.latencyMs ? p.latencyMs + " ms" : "—") + " · " + p.ok + "/" + (p.ok + p.fail) + " answered", "No peer has answered a search yet.") +
-    list("Needs attention", worst, (p) => p.health + " · answered " + Math.round((p.ok / (p.ok + p.fail)) * 100) + "%" + (p.latencyMs > 1000 ? " · slow " + p.latencyMs + " ms" : "") + ((p.blocked || []).length ? " · " + p.blocked.length + " blocked" : ""), "Every scored peer is healthy.") +
+    list("Best performing", best, (p) => p.health + " · " + (p.latencyMs ? p.latencyMs + " ms" : p.res && p.res.cores ? Math.round((p.res.load / p.res.cores) * 100) + "% busy" : "—") + " · " + answeredPct(p) + "% answered", "No peer has answered a search yet.") +
+    list("Needs attention", worst, (p) => p.health + " · answered " + answeredPct(p) + "%" + (p.latencyMs > 1000 ? " · slow " + p.latencyMs + " ms" : "") + ((p.blocked || []).length ? " · " + p.blocked.length + " blocked" : ""), "Every scored peer is healthy.") +
     list("Most blocked", blockedNodes, (n) => n.blocked.length + " blocked: " + n.blocked.slice(0, 4).join(", ") + (n.blocked.length > 4 ? "…" : ""), "No node reports blocked engines.");
 }
 
