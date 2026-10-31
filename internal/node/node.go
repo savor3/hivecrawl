@@ -23,6 +23,15 @@ const (
 	maxPeers       = 3
 	localTimeout   = 12 * time.Second
 	scatterTimeout = 6 * time.Second
+	// searchBudget is the most a public search may take, routes included,
+	// so one slow or queued engine cannot hold a search: what answered in
+	// time is returned. This node's SearXNG gets localBudget of it, the
+	// rest is left for other routes when it fails.
+	searchBudget = 5 * time.Second
+	localBudget  = 3500 * time.Millisecond
+	// ServeBudget bounds a search a peer asks this node for; the peer
+	// gives up sooner than that anyway.
+	ServeBudget = 4500 * time.Millisecond
 	// warpSuffix names SearXNG's WARP copy of an engine ("brave warp").
 	warpSuffix = " warp"
 	// staleFor is how old a cached answer may be and still be served when
@@ -86,15 +95,24 @@ func (n *Node) Local(ctx context.Context, req types.SearchRequest) (types.Search
 	return respond(out.Results, req.Limit, types.Meta{Source: "local", Engines: out.Engines, Blocked: out.Blocked}, start), nil
 }
 
+// localWithin is Local held to localBudget, leaving time for other routes.
+func (n *Node) localWithin(ctx context.Context, req types.SearchRequest) (types.SearchResponse, error) {
+	ctx, cancel := context.WithTimeout(ctx, localBudget)
+	defer cancel()
+	return n.Local(ctx, req)
+}
+
 // Search is the public entry point.
 func (n *Node) Search(ctx context.Context, req types.SearchRequest) types.SearchResponse {
 	start := time.Now()
 	req.Normalize()
 	req.Engines = nil // public searches use every engine
+	ctx, cancel := context.WithTimeout(ctx, searchBudget)
+	defer cancel()
 	if req.Category != "" {
 		return n.searchCategory(ctx, req, start)
 	}
-	local, lerr := n.Local(ctx, req)
+	local, lerr := n.localWithin(ctx, req)
 	if lerr != nil {
 		log.Printf("local search failed: %v", lerr)
 	}
@@ -139,7 +157,7 @@ func (n *Node) Search(ctx context.Context, req types.SearchRequest) types.Search
 // searchCategory answers image and news searches: this node first, then
 // peers that understand categories (these are not split by engine).
 func (n *Node) searchCategory(ctx context.Context, req types.SearchRequest, start time.Time) types.SearchResponse {
-	local, err := n.Local(ctx, req)
+	local, err := n.localWithin(ctx, req)
 	if err == nil && len(local.Data.Web) == 0 && req.TimeRange != "" {
 		// Many news engines skip a query that has a time_range they do not
 		// support. Ask without it and enforce the range on publish dates.
@@ -448,7 +466,10 @@ func (n *Node) fallback(req types.SearchRequest, local types.SearchResponse, ler
 		local.Meta.Retry = true
 	}
 	if lerr != nil && len(local.Data.Web) == 0 {
-		return types.SearchResponse{Success: false, Error: "no results: local search failed and no other route could answer", Data: types.SearchData{Web: []types.Result{}}}
+		// This node's SearXNG is down or overloaded and no other route
+		// answered in time: ask the client to come back (429 with
+		// Retry-After), not a server error.
+		return respond(nil, req.Limit, types.Meta{Source: "none", Blocked: local.Meta.Blocked, Retry: true}, start)
 	}
 	local.Meta.TookMs = time.Since(start).Milliseconds()
 	return local

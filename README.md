@@ -60,6 +60,14 @@ proxies on demand, or features listed under [where Firecrawl is better](#hivecra
 
 ---
 
+## What's new in 0.4.9
+
+- **Searches finish in seconds, even on a busy node.** A web search now has a 5 second budget, routes included:
+  this node's engines get 3.5 s and whatever answered by then is returned, so a slow engine (yacy) or a
+  CAPTCHA-blocked one (DuckDuckGo) can no longer hold a search for 18 s. SearXNG now serves 32 searches at once
+  instead of 4 (`HC_SEARXNG_THREADS`), which is what made busy nodes queue. If nothing at all could answer in time,
+  the API answers 429 with `Retry-After` instead of a 500.
+
 ## What's new in 0.4.8
 
 - **Insights.** The Search page shows a knowledge panel (Wikipedia summary, photo and link), instant answers

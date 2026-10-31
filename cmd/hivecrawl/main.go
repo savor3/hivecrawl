@@ -83,6 +83,8 @@ func main() {
 		// Searches peers ask for count toward this node's search rate.
 		Local: func(ctx context.Context, req types.SearchRequest) (types.SearchResponse, error) {
 			n.CountSearch()
+			ctx, cancel := context.WithTimeout(ctx, node.ServeBudget)
+			defer cancel()
 			return n.Local(ctx, req)
 		},
 		ProbeLocal: n.ProbeAnswer,

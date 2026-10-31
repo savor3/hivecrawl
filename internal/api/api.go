@@ -500,7 +500,7 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 
 // Version is reported to MCP clients and compared with the newest release;
 // release builds set it with -ldflags.
-var Version = "0.4.8"
+var Version = "0.4.9"
 
 func (s *Server) updateStatus() update.Status {
 	st := update.Status{Current: Version, Error: "update check is off (HC_UPDATE_CHECK=false)"}
