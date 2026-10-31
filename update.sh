@@ -83,10 +83,16 @@ up() {
   else
     docker compose up -d --build --remove-orphans
   fi
+  # SearXNG reads its mounted settings only when it starts, and compose
+  # doesn't recreate it for a changed file: restart it when they changed.
+  if ! git_ diff --quiet "$before" HEAD -- deploy/searxng 2>/dev/null; then
+    docker compose restart searxng
+  fi
 }
 
 echo "$(date -u '+%F %T') updating $current -> $latest"
 previous=$(git_ rev-parse HEAD)
+before=$previous # the version up() compares settings against
 git_ -c advice.detachedHead=false checkout --quiet "$latest"
 if up >/dev/null 2>&1 && healthy; then
   echo "$(date -u '+%F %T') now running $latest"
@@ -99,6 +105,7 @@ if up >/dev/null 2>&1 && healthy; then
   exit 0
 fi
 echo "$(date -u '+%F %T') $latest did not start; went back to $current" >&2
+before=$(git_ rev-parse HEAD)
 git_ -c advice.detachedHead=false checkout --quiet "$previous"
 up >/dev/null 2>&1 || true
 exit 1
