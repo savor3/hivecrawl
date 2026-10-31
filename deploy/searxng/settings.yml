@@ -142,6 +142,9 @@ use_default_settings:
       - wikivoyage
       - wikiversity
       - wikispecies
+      - internet archive
+      - gutenberg
+      - apple podcasts
     # Not bing: it serves scrapers plausible-looking but unrelated results
     # instead of blocking them, which poisons merged results.
 server:
@@ -399,6 +402,47 @@ engines:
   - name: wikiversity
     disabled: true
   - name: wikispecies
+    disabled: true
+
+  # ---- free JSON APIs SearXNG has no engine for (categories only) ----
+  - name: internet archive
+    engine: json_engine
+    shortcut: ia
+    categories: [books]
+    paging: true
+    search_url: https://archive.org/advancedsearch.php?q={query}&fl[]=identifier&fl[]=title&fl[]=description&fl[]=mediatype&rows=10&page={pageno}&output=json
+    results_query: response/docs
+    url_query: identifier
+    url_prefix: https://archive.org/details/
+    title_query: title
+    content_query: description
+    content_html_to_text: true
+    timeout: 6.0
+    disabled: true
+  - name: gutenberg
+    engine: json_engine
+    shortcut: gut
+    categories: [books]
+    paging: false
+    search_url: https://gutendex.com/books/?search={query}
+    results_query: results
+    url_query: id
+    url_prefix: https://www.gutenberg.org/ebooks/
+    title_query: title
+    content_query: summaries
+    timeout: 6.0
+    disabled: true
+  - name: apple podcasts
+    engine: json_engine
+    shortcut: apod
+    categories: [music]
+    paging: false
+    search_url: https://itunes.apple.com/search?term={query}&media=podcast&limit=10
+    results_query: results
+    url_query: collectionViewUrl
+    title_query: collectionName
+    content_query: artistName
+    timeout: 6.0
     disabled: true
 
   # ---- WARP fallbacks (selected explicitly by HiveCrawl) ----

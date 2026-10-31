@@ -38,6 +38,8 @@ type fcSearchRequest struct {
 
 	// HiveCrawl extension: answer from this node only, never the mesh.
 	LocalOnly bool `json:"localOnly"`
+	// HiveCrawl extension: false turns off smart search (see node.Intents).
+	Smart *bool `json:"smart"`
 }
 
 // fcWebResult is Firecrawl's WebSearchResult. The page-content fields are
@@ -108,6 +110,7 @@ type parsed struct {
 	req      types.SearchRequest
 	sources  []string
 	topics   []string // categories: web results come from these instead
+	smart    bool     // mix in results from the categories the query suggests
 	include  []string
 	exclude  []string
 	validURL bool
@@ -154,6 +157,7 @@ func parseFirecrawl(in fcSearchRequest) (parsed, error) {
 	p.include = cleanDomains(in.IncludeDomains)
 	p.exclude = cleanDomains(in.ExcludeDomains)
 	p.validURL = in.IgnoreInvalidURLs
+	p.smart = (in.Smart == nil || *in.Smart) && len(p.topics) == 0 && len(p.include) == 0
 	p.timeout = in.Timeout
 
 	// Like Firecrawl's fallback providers, domain filters are expressed as a

@@ -108,7 +108,8 @@ func (s *Server) mcpServer() *mcp.Server {
 			"Use includeDomains to search within specific sites. For recent events use sources=[\"news\"] with tbs " +
 			"(qdr:d past day, qdr:w past week): news results carry publish dates; web results only sometimes do. " +
 			"Use categories for specialist sources: research for papers (arXiv, PubMed, Crossref…), developer for " +
-			"code, Q&A and docs (GitHub, Stack Overflow, MDN…), packages for npm/PyPI-style registries, pdf for PDF files.",
+			"code, Q&A and docs (GitHub, Stack Overflow, MDN…), packages for npm/PyPI-style registries, pdf for PDF files. " +
+			"Without categories, a query that clearly looks like code, research, books and so on gets a few results from those engines mixed in.",
 		Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true, OpenWorldHint: ptr(true)},
 	}, func(ctx context.Context, _ *mcp.CallToolRequest, in mcpSearchIn) (*mcp.CallToolResult, mcpSearchOut, error) {
 		req := fcSearchRequest{

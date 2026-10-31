@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -34,6 +35,9 @@ type Engine struct {
 	Enabled    bool     `json:"enabled"`
 	Categories []string `json:"categories"`
 }
+
+// answerMargin is the time left for SearXNG's answer to reach us.
+const answerMargin = 700 * time.Millisecond
 
 // knownTTL is how long the engine list from /config is trusted.
 const knownTTL = 10 * time.Minute
@@ -89,6 +93,13 @@ func (c *Client) Search(ctx context.Context, req types.SearchRequest) (Outcome, 
 	if req.Category != "" {
 		q.Set("categories", req.Category)
 	}
+	// Have SearXNG answer with what it has shortly before the caller gives
+	// up, instead of waiting on slow engines and the whole answer being lost.
+	if dl, ok := ctx.Deadline(); ok {
+		if left := time.Until(dl) - answerMargin; left >= time.Second {
+			q.Set("timeout_limit", strconv.FormatFloat(left.Seconds(), 'f', 1, 64))
+		}
+	}
 	r, err := http.NewRequestWithContext(ctx, http.MethodGet, c.base+"/search?"+q.Encode(), nil)
 	if err != nil {
 		return Outcome{}, err
@@ -115,7 +126,7 @@ func (c *Client) Search(ctx context.Context, req types.SearchRequest) (Outcome, 
 	seen := map[string]bool{}
 	for i, x := range sr.Results {
 		res := types.Result{
-			URL: x.URL, Title: x.Title, Description: x.Content, Position: i + 1, Engines: x.Engines,
+			URL: x.URL, Title: x.Title, Description: unlist(x.Content), Position: i + 1, Engines: x.Engines,
 			Date: normalizeDate(x.PublishedDate),
 		}
 		switch {
@@ -263,4 +274,20 @@ func parseResolution(s string) (int, int) {
 		return 0, 0
 	}
 	return w, h
+}
+
+// unlist unwraps a description that a JSON engine passed through as a
+// Python list repr (['first', 'second']), keeping the first item.
+func unlist(s string) string {
+	if !strings.HasPrefix(s, "['") && !strings.HasPrefix(s, `["`) {
+		return s
+	}
+	q := s[1:2]
+	s = s[2:]
+	if end := strings.Index(s, q+", "+q); end >= 0 {
+		s = s[:end]
+	} else {
+		s = strings.TrimSuffix(strings.TrimSuffix(s, "]"), q)
+	}
+	return strings.ReplaceAll(s, `\'`, "'")
 }

@@ -177,6 +177,9 @@ func (s *Server) run(w http.ResponseWriter, r *http.Request) (parsed, results, b
 	h.Set("X-HC-Node", s.Node.Name)
 	h.Set("X-HC-Source", res.meta.Source)
 	h.Set("X-HC-Took-Ms", strconv.FormatInt(res.meta.TookMs, 10))
+	if len(res.meta.Intent) > 0 {
+		h.Set("X-HC-Intent", strings.Join(res.meta.Intent, ","))
+	}
 	if len(res.meta.Engines) > 0 {
 		h.Set("X-HC-Engines", strings.Join(res.meta.Engines, ","))
 	}
@@ -235,7 +238,20 @@ func (s *Server) searchAll(ctx context.Context, p parsed) (results, error) {
 				out.web, out.meta = web, meta
 				return
 			}
+			var intents []string
+			var extra []types.SearchResponse
+			var iwg sync.WaitGroup
+			if src == "web" && p.smart {
+				intents = node.Intents(p.req.Query)
+				extra = make([]types.SearchResponse, len(intents))
+				ictx, cancel := context.WithTimeout(ctx, smartTimeout)
+				defer cancel()
+				for i, t := range intents {
+					iwg.Go(func() { extra[i] = s.Node.Topic(ictx, r, t) })
+				}
+			}
 			resp := s.Node.Search(ctx, r)
+			iwg.Wait()
 			mu.Lock()
 			defer mu.Unlock()
 			if !resp.Success {
@@ -249,6 +265,18 @@ func (s *Server) searchAll(ctx context.Context, p parsed) (results, error) {
 			switch src {
 			case "web":
 				out.web = p.toWeb(resp.Data.Web, limit)
+				for i, t := range intents {
+					if !extra[i].Success || len(extra[i].Data.Web) == 0 {
+						continue
+					}
+					more := p.toWeb(extra[i].Data.Web, limit)
+					for j := range more {
+						more[j].Category = t
+					}
+					out.web = mixIn(out.web, more, limit)
+					out.meta.Intent = append(out.meta.Intent, t)
+					out.meta.Engines = union(out.meta.Engines, extra[i].Meta.Engines)
+				}
 			case "images":
 				out.images = p.toImages(resp.Data.Web, limit)
 			case "news":
@@ -323,6 +351,44 @@ func (s *Server) searchTopics(ctx context.Context, p parsed, req types.SearchReq
 		}
 	}
 	return out, meta, nil
+}
+
+// smartTimeout bounds the category searches smart search adds, so they
+// never hold up a web search for long.
+const smartTimeout = 6 * time.Second
+
+// mixIn puts a few specialist results into web results: one in every
+// third place from the third on, at most a third of the page, and any
+// room left at the end. Duplicates of web results are skipped.
+func mixIn(web, more []fcWebResult, limit int) []fcWebResult {
+	have := map[string]bool{}
+	for _, r := range web {
+		have[r.URL] = true
+	}
+	var add []fcWebResult
+	for _, r := range more {
+		if !have[r.URL] {
+			have[r.URL] = true
+			add = append(add, r)
+		}
+	}
+	quota := max(2, limit/3)
+	out := make([]fcWebResult, 0, limit)
+	for i := 0; len(out) < limit && (i < len(web) || len(add) > 0); {
+		if len(add) > 0 && quota > 0 && (len(out)%3 == 2 || i >= len(web)) {
+			out, add, quota = append(out, add[0]), add[1:], quota-1
+			continue
+		}
+		if i >= len(web) {
+			break
+		}
+		out = append(out, web[i])
+		i++
+	}
+	for j := range out {
+		out[j].Position = j + 1
+	}
+	return out
 }
 
 func union(a, b []string) []string {
@@ -426,7 +492,7 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 
 // Version is reported to MCP clients and compared with the newest release;
 // release builds set it with -ldflags.
-var Version = "0.4.6"
+var Version = "0.4.7"
 
 func (s *Server) updateStatus() update.Status {
 	st := update.Status{Current: Version, Error: "update check is off (HC_UPDATE_CHECK=false)"}

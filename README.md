@@ -58,6 +58,19 @@ proxies on demand, or features listed under [where Firecrawl is better](#hivecra
 
 ---
 
+## What's new in 0.4.7
+
+- **Smart search.** An ordinary web search that clearly looks like code, research, a book, a song, a film and so
+  on now also asks that category's specialist engines and mixes a few of their results in (every third place, at
+  most a third of the page, tagged with `category`). "crispr off-target effects studies" picks up arXiv and Europe
+  PMC papers; "oliver twist dickens novel" picks up Project Gutenberg and the Internet Archive. The guess is
+  rule-based (words and code patterns, no AI), adds at most two categories, never applies to site-restricted
+  searches, and the `X-HC-Intent` header says what was added. Turn it off per request with `"smart": false`.
+- **New sources:** the Internet Archive and Project Gutenberg (books) and Apple Podcasts (music & podcasts),
+  wired in through SearXNG's generic JSON engine.
+- **Slow engines no longer sink a search.** HiveCrawl tells SearXNG how long it can wait, so SearXNG answers with
+  the engines that made it instead of the whole answer timing out.
+
 ## What's new in 0.4.6
 
 - **The Network page is live.** It refreshes every 2 seconds; a peer's row flashes teal when this node sends it
@@ -556,6 +569,7 @@ Tested with the official SDKs — `firecrawl-py` 4.54 and `@mendable/firecrawl-j
 | `POST /v2/search`, `POST /v1/search` | ✅ `query`, `limit` (≤100), `tbs` (`qdr:h/d/w/m/y`), `lang`, `country`, `includeDomains`, `excludeDomains`, `ignoreInvalidURLs`, `timeout`, `scrapeOptions` |
 | search `sources` | ✅ `web`, `news` (with dates and thumbnails), `images` (with sizes) |
 | search `categories` | ✅ `research`, `developer` (and the older `github`), `pdf`; results carry `category`. ❌ `gov`. Extensions: `packages`, `videos`, `social`, `books`, `music`, `movies`, `apps`, `maps`, `reference`, `web`, `all` |
+| smart search | HiveCrawl extension: web searches that look like code, research, books… mix in that category's results; `"smart": false` turns it off |
 | `POST /v2/scrape`, `POST /v1/scrape` | ✅ formats `markdown`, `html`, `rawHtml`, `links`, `screenshot` (`@fullPage`), `json`, `summary`; `onlyMainContent`, `includeTags`, `excludeTags`, `waitFor`, `mobile`, `actions`, `timeout`; PDF and DOCX |
 | `POST /v2/crawl`, `GET/DELETE /v2/crawl/{id}`, `/errors`, `/ongoing` | ✅ |
 | `POST /v2/batch/scrape` and status | ✅ |

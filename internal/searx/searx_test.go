@@ -33,3 +33,15 @@ func TestUnknownEnginesDoNotBecomeAGeneralSearch(t *testing.T) {
 		t.Fatalf("mixed engines: results=%d asked=%v", len(out.Results), asked)
 	}
 }
+
+func TestUnlist(t *testing.T) {
+	for in, want := range map[string]string{
+		`['A novel by Dickens.', 'Second']`: "A novel by Dickens.",
+		`['It\'s good.']`:                   "It's good.",
+		`plain text`:                        "plain text",
+	} {
+		if got := unlist(in); got != want {
+			t.Errorf("unlist(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

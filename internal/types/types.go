@@ -47,6 +47,8 @@ type SearchData struct {
 }
 
 type Meta struct {
+	// Intent lists the categories smart search mixed into web results.
+	Intent []string `json:"intent,omitempty"`
 	// Source is "cache", "local", or "peer:<nodeID>".
 	Source string `json:"source"`
 	TookMs int64  `json:"tookMs"`

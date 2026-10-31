@@ -195,3 +195,29 @@ func TestParseCategories(t *testing.T) {
 		t.Fatal("unsupported category accepted")
 	}
 }
+
+func TestMixIn(t *testing.T) {
+	mk := func(prefix string, n int) []fcWebResult {
+		var out []fcWebResult
+		for i := range n {
+			out = append(out, fcWebResult{URL: prefix + string(rune('a'+i))})
+		}
+		return out
+	}
+	got := mixIn(mk("w", 10), append(mk("s", 5), fcWebResult{URL: "wa"}), 10)
+	var urls []string
+	for i, r := range got {
+		urls = append(urls, r.URL)
+		if r.Position != i+1 {
+			t.Fatalf("position %d at %d", r.Position, i)
+		}
+	}
+	want := "wa wb sa wc wd sb we wf sc wg"
+	if strings.Join(urls, " ") != want {
+		t.Fatalf("got  %s\nwant %s", strings.Join(urls, " "), want)
+	}
+	// Few web results: specialist ones fill the rest, within the quota.
+	if got := mixIn(mk("w", 1), mk("s", 9), 10); len(got) != 4 {
+		t.Fatalf("fill: %d results", len(got))
+	}
+}
