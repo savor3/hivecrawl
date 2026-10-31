@@ -181,3 +181,17 @@ func TestParseSourcesForms(t *testing.T) {
 		t.Error("unknown source accepted")
 	}
 }
+
+func TestParseCategories(t *testing.T) {
+	got, err := parseCategories([]byte(`[{"type":"research"},{"type":"PDF"},{"type":"research"}]`))
+	if err != nil || len(got) != 2 || got[0] != "research" || got[1] != "pdf" {
+		t.Fatalf("got %v, %v", got, err)
+	}
+	all, err := parseCategories([]byte(`["all","developer"]`))
+	if err != nil || all[0] != "web" || len(all) < 10 {
+		t.Fatalf("all: %v, %v", all, err)
+	}
+	if _, err := parseCategories([]byte(`["gov"]`)); err == nil {
+		t.Fatal("unsupported category accepted")
+	}
+}

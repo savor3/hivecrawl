@@ -82,6 +82,13 @@ func main() {
 		PeerRate: cfg.PeerRate, MaxConcurrent: cfg.MaxConcurrent, Dialer: outDialer, Client: outClient, Local: n.Local,
 		ProbeLocal: n.ProbeAnswer,
 		Blocked:    n.BlockedEngines,
+		Resources: func() mesh.Resources {
+			r := mesh.HostResources()
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			defer cancel()
+			r.Engines = n.EngineCount(ctx)
+			return r
+		},
 		// Opt-in: fetch pages for peers, with this node's own routes only.
 		ServeScrapes: cfg.ServeScrapes,
 		FetchRaw: func(ctx context.Context, u string) (*types.RawPage, error) {

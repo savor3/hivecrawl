@@ -28,6 +28,7 @@ type mcpSearchIn struct {
 	IncludeDomains []string `json:"includeDomains,omitempty" jsonschema:"only return results from these domains"`
 	ExcludeDomains []string `json:"excludeDomains,omitempty" jsonschema:"never return results from these domains"`
 	Sources        []string `json:"sources,omitempty" jsonschema:"what to search: web (default), news (dated articles; best with tbs for recent events), images"`
+	Categories     []string `json:"categories,omitempty" jsonschema:"search specialist engines instead of the general web (all = web plus every category): research (papers), developer (code, Q&A, docs), github, packages, pdf, videos, social, books, music, movies, apps, maps, reference"`
 	Scrape         bool     `json:"scrape,omitempty" jsonschema:"also fetch each web result page and include its main content as markdown (slower)"`
 }
 
@@ -105,7 +106,9 @@ func (s *Server) mcpServer() *mcp.Server {
 			"Returns ranked results with url, title and description. " +
 			"Set scrape=true to also get each page's main content as markdown. " +
 			"Use includeDomains to search within specific sites. For recent events use sources=[\"news\"] with tbs " +
-			"(qdr:d past day, qdr:w past week): news results carry publish dates; web results only sometimes do.",
+			"(qdr:d past day, qdr:w past week): news results carry publish dates; web results only sometimes do. " +
+			"Use categories for specialist sources: research for papers (arXiv, PubMed, Crossref…), developer for " +
+			"code, Q&A and docs (GitHub, Stack Overflow, MDN…), packages for npm/PyPI-style registries, pdf for PDF files.",
 		Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true, OpenWorldHint: ptr(true)},
 	}, func(ctx context.Context, _ *mcp.CallToolRequest, in mcpSearchIn) (*mcp.CallToolResult, mcpSearchOut, error) {
 		req := fcSearchRequest{
@@ -115,6 +118,10 @@ func (s *Server) mcpServer() *mcp.Server {
 		if len(in.Sources) > 0 {
 			b, _ := json.Marshal(in.Sources)
 			req.Sources = b
+		}
+		if len(in.Categories) > 0 {
+			b, _ := json.Marshal(in.Categories)
+			req.Categories = b
 		}
 		if in.Scrape {
 			req.ScrapeOptions = &fcScrapeOptions{}

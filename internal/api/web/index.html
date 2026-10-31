@@ -223,6 +223,23 @@ table.t td.num { font-family: var(--mono); font-size: 12.5px; }
 .engines { display: flex; flex-wrap: wrap; gap: 8px; }
 .engine { display: flex; align-items: center; gap: 8px; padding: 8px 13px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; font: 12.5px var(--mono); }
 .engine .why { color: var(--muted); font-family: var(--sans); font-size: 12px; }
+.ranks { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; margin: 0 0 22px; }
+.rank { padding: 16px 18px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--lift); min-width: 0; }
+.rank h4 { margin: 0 0 10px; font-size: 13px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.rank ol { margin: 0; padding: 0 0 0 20px; display: grid; gap: 6px; font-size: 14px; }
+.rank li span { color: var(--muted); font-size: 12.5px; margin-left: 6px; overflow-wrap: anywhere; }
+.hscore { display: inline-block; min-width: 34px; text-align: center; padding: 2px 8px; border-radius: 99px; font: 600 12px var(--mono); }
+.hscore.good { background: var(--teal-soft); color: var(--teal); }
+.hscore.fair { background: var(--info-soft); color: var(--info); }
+.hscore.poor { background: var(--warn-soft); color: var(--warn); }
+.hscore.new { background: var(--surface-2); color: var(--muted); }
+.egroup { margin: 0 0 8px; border: 1px solid var(--border); border-radius: 11px; background: var(--surface-2); }
+.egroup > summary { display: flex; align-items: center; gap: 8px; padding: 10px 14px; cursor: pointer; font-weight: 600; font-size: 14px; list-style: none; }
+.egroup > summary::-webkit-details-marker { display: none; }
+.egroup > summary::before { content: "›"; color: var(--muted); transition: transform .15s; }
+.egroup[open] > summary::before { transform: rotate(90deg); }
+.egroup > summary .n { color: var(--muted); font-weight: 400; font-size: 12.5px; }
+.egroup > .engines { padding: 0 14px 12px; }
 .bar { position: relative; width: 70px; height: 6px; border-radius: 99px; background: var(--surface-2); overflow: hidden; display: inline-block; vertical-align: middle; margin-right: 6px; }
 .bar i { position: absolute; inset: 0 auto 0 0; background: var(--ok); border-radius: 99px; }
 
@@ -396,6 +413,7 @@ textarea.big { font-family: var(--sans); font-size: 15px; resize: vertical; min-
         <div class="options">
           <label class="field">Results <select id="limit"><option>5</option><option selected>10</option><option>20</option><option>50</option></select></label>
           <label class="field">Time <select id="tbs"><option value="">Any time</option><option value="qdr:d">Past day</option><option value="qdr:w">Past week</option><option value="qdr:m">Past month</option><option value="qdr:y">Past year</option></select></label>
+          <label class="field" id="catField" title="Search specialist engines instead of the general web">Category <select id="cat"><option value="">General web</option><option value="research">Research papers</option><option value="developer">Developer (code, Q&amp;A, docs)</option><option value="github">Code hosting</option><option value="packages">Packages &amp; models</option><option value="pdf">PDF files</option><option value="videos">Videos</option><option value="social">Social &amp; forums</option><option value="books">Books</option><option value="music">Music &amp; podcasts</option><option value="movies">Movies</option><option value="apps">Apps</option><option value="maps">Places</option><option value="reference">Reference</option><option value="all">Everything (all engines)</option></select></label>
           <label class="field">Sites <input type="text" id="domains" placeholder="e.g. wikipedia.org"></label>
           <label class="toggle"><input type="checkbox" id="withContent"><span class="sw"></span>Page content</label>
           <label class="toggle"><input type="checkbox" id="localOnly"><span class="sw"></span>This node only</label>
@@ -575,10 +593,15 @@ textarea.big { font-family: var(--sans); font-size: 15px; resize: vertical; min-
   <section class="view" id="view-network">
     <div class="hero"><h1>Network</h1><p>This node, its engines, and the peers it trades searches with. Refreshes every 5 seconds.</p></div>
     <div class="stats" id="stats"></div>
-    <h2>Engines</h2>
-    <div class="engines" id="engines"></div>
+    <h2>Network pool</h2>
+    <p class="side-note" style="margin:-4px 0 12px">Every node this one can see, including itself. Machines are as each node reports them; nodes on older versions don't report and are left out of the totals.</p>
+    <div class="stats" id="pool"></div>
+    <div class="ranks" id="ranks"></div>
+    <h2>Engines <span class="tag" id="engineCount"></span></h2>
+    <p class="side-note" style="margin:-4px 0 12px">Web, News and Images engines run on every search of that kind. The others run only when a search asks for their category.</p>
+    <div id="engines"></div>
     <h2>Peers</h2>
-    <div class="table-wrap"><table class="t"><thead><tr><th>Node</th><th>Route</th><th>Status</th><th>Answered</th><th>Asked / served</th><th>Priority</th><th>Agreement</th><th>Latency</th><th>Online</th></tr></thead><tbody id="peers"></tbody></table></div>
+    <div class="table-wrap"><table class="t"><thead><tr><th>Node</th><th>Health</th><th>Machine</th><th>Route</th><th>Status</th><th>Answered</th><th>Asked / served</th><th>Priority</th><th>Agreement</th><th>Latency</th><th>Online</th></tr></thead><tbody id="peers"></tbody></table></div>
   </section>
 
   <!-- ===================== CONNECT ===================== -->
@@ -729,12 +752,14 @@ let currentSrc = "web";
 document.querySelectorAll("#srcSeg .seg").forEach((b) => (b.onclick = () => {
   currentSrc = b.dataset.src;
   document.querySelectorAll("#srcSeg .seg").forEach((x) => x.classList.toggle("active", x === b));
+  $("cat").disabled = currentSrc !== "web"; // categories narrow web results only
   renderSearchCode();
   if ($("q").value.trim()) $("searchForm").requestSubmit();
 }));
 function searchBody() {
   const b = { query: $("q").value.trim() || "kerala monsoon forecast", limit: +$("limit").value };
   if (currentSrc !== "web") b.sources = [currentSrc];
+  else if ($("cat").value) b.categories = [$("cat").value];
   if ($("tbs").value) b.tbs = $("tbs").value;
   const d = $("domains").value.split(/[,\s]+/).filter(Boolean);
   if (d.length) b.includeDomains = d;
@@ -749,6 +774,7 @@ function renderSearchCode() {
   if (b.tbs) args.push('tbs="' + b.tbs + '"');
   if (b.includeDomains) args.push("include_domains=" + pyList(b.includeDomains));
   if (b.sources) args.push("sources=" + pyList(b.sources));
+  if (b.categories) args.push("categories=" + pyList(b.categories));
   if (b.scrapeOptions) { py.push("from firecrawl.v2.types import ScrapeOptions"); args.push('scrape_options=ScrapeOptions(formats=["markdown"])'); }
   py.push("", 'app = Firecrawl(api_key="' + keyShown() + '", api_url="' + origin + '")', "results = app.search(" + args.join(", ") + ")", "for r in results." + currentSrc + ":", "    print(r)");
   const jsOpts = Object.assign({}, b); delete jsOpts.query; delete jsOpts.localOnly;
@@ -782,7 +808,7 @@ function renderScrapeCode() {
   const js = ['import Firecrawl from "@mendable/firecrawl-js";', "", 'const app = new Firecrawl({ apiKey: "' + keyShown() + '", apiUrl: "' + origin + '" });', "const doc = await app.scrape(" + JSON.stringify(b.url) + ", " + JSON.stringify(o) + ");", "console.log(doc.markdown);"].join("\n");
   codePanel($("scrapeCode"), { cURL: curlCmd("/v2/scrape", b), Python: py, Node: js }, "Fetched by this node with a Chrome fingerprint; JavaScript pages, actions, mobile and screenshots use its headless Chrome. PDF and DOCX work too.");
 }
-["q", "limit", "tbs", "domains", "withContent", "localOnly"].forEach((id) => $(id).addEventListener("input", renderSearchCode));
+["q", "limit", "tbs", "cat", "domains", "withContent", "localOnly"].forEach((id) => $(id).addEventListener("input", renderSearchCode));
 ["url", "mainOnly", "includeTags", "excludeTags", "mobile", "waitFor", "jsonPrompt"].forEach((id) => $(id).addEventListener("input", renderScrapeCode));
 $("formats").addEventListener("change", renderScrapeCode);
 
@@ -803,6 +829,9 @@ function engineTags(h) {
   return (e.length ? "<span>engines</span>" + e.map((x) => '<span class="tag">' + esc(x) + "</span>").join(" ") : "") +
     (b.length ? '<span style="margin-left:4px">blocked here</span>' + b.map((x) => '<span class="badge bad">' + esc(x) + "</span>").join("") : "");
 }
+const engineOpen = new Set(["web"]);
+const groupLabel = { web: "Web", news: "News", images: "Images", research: "Research papers", developer: "Developer", packages: "Packages & models", videos: "Videos", social: "Social & forums", books: "Books", music: "Music & podcasts", movies: "Movies", apps: "Apps", maps: "Places", reference: "Reference", warp: "WARP copies (used when a direct engine is blocked)" };
+const catLabel = (c) => { const o = [...$("cat").options].find((x) => x.value === c); return o ? o.textContent.replace(/ \(.*\)$/, "") : c; };
 let lastResults = [];
 $("searchForm").onsubmit = async (e) => {
   e.preventDefault();
@@ -831,7 +860,7 @@ $("searchForm").onsubmit = async (e) => {
       const content = r.markdown ? '<details class="content"><summary>Page content · ' + (r.markdown.length / 1000).toFixed(1) + 'k chars</summary><div class="prose">' + md(r.markdown.slice(0, 20000)) + "</div></details>"
         : r.metadata && r.metadata.error ? '<details class="content"><summary>Could not fetch page</summary><div class="side-note">' + esc(r.metadata.error) + "</div></details>" : "";
       return '<article class="result"><div class="r-top"><div class="r-pos">' + (r.position || i + 1) + '</div><div class="favicon">' + esc(h.slice(0, 1)) + '</div><div class="r-body">' +
-        '<div class="r-host">' + esc(h) + "</div>" +
+        '<div class="r-host">' + esc(h) + (r.category ? ' <span class="tag">' + esc(catLabel(r.category)) + "</span>" : "") + "</div>" +
         '<a class="r-title" href="' + esc(r.url) + '" target="_blank" rel="noopener noreferrer">' + esc(r.title || r.url) + "</a>" +
         '<p class="r-desc">' + esc(r.description) + "</p></div>" +
         '<div class="r-actions"><button class="btn small" data-scrape="' + i + '" title="Open in Scrape"><svg><use href="#i-doc"/></svg><span>Scrape</span></button></div></div>' + content + "</article>";
@@ -1165,6 +1194,49 @@ $("llmRemove").onclick = async () => {
   loadSettings();
 };
 
+/* ---------- pool & health ---------- */
+// Health is scored by this node from what it saw of each peer (see
+// internal/mesh/health.go): answers 40%, latency 20%, agreement 20%,
+// unblocked engines 20%. -1 means it has not been asked anything yet.
+function healthBadge(p) {
+  const h = p.health ?? -1;
+  if (h < 0) return '<span class="hscore new" title="Not asked any searches yet">new</span>';
+  const cls = h >= 85 ? "good" : h >= 60 ? "fair" : "poor";
+  const tip = (h >= 85 ? "Healthy" : h >= 60 ? "Fair" : "Poor") + ": answered " + p.ok + "/" + (p.ok + p.fail) + (p.latencyMs ? ", " + p.latencyMs + " ms" : "") +
+    (p.checks ? ", " + Math.round(p.agreement * 100) + "% agreement" : "") + ", " + (p.blocked || []).length + " engines blocked";
+  return '<span class="hscore ' + cls + '" title="' + esc(tip) + '">' + h + "</span>";
+}
+const gb = (mb) => (mb >= 1024 ? (mb / 1024).toFixed(mb >= 10240 ? 0 : 1) + " GB" : mb + " MB");
+function machine(r) {
+  if (!r || !r.cores) return '<span style="color:var(--muted)" title="Older version: does not report">—</span>';
+  return r.cores + " CPU · " + gb(r.memMb) + ' <span class="tag" title="1-minute load per core">' + Math.round(((r.load || 0) / r.cores) * 100) + "%</span>";
+}
+function renderPool(s, peers) {
+  const nodes = [{ name: s.node + " (this node)", res: s.res, blocked: Object.keys((s.searxng && s.searxng.blocked) || {}) }, ...peers.filter((p) => p.name || p.url || p.tunneled || p.via)];
+  const rep = nodes.filter((n) => n.res && n.res.cores);
+  const sum = (f) => rep.reduce((a, n) => a + (f(n.res) || 0), 0);
+  const cores = sum((r) => r.cores), mem = sum((r) => r.memMb), free = sum((r) => r.memFreeMb), load = sum((r) => r.load);
+  const scored = peers.filter((p) => (p.health ?? -1) >= 0);
+  const avg = scored.length ? Math.round(scored.reduce((a, p) => a + p.health, 0) / scored.length) : null;
+  const stat = (k, v, sub) => '<div class="stat"><div class="k">' + k + '</div><div class="v">' + esc(v) + "</div>" + (sub ? '<div class="s">' + esc(sub) + "</div>" : "") + "</div>";
+  const engines = Math.max(0, ...rep.map((n) => n.res.engines || 0));
+  $("pool").innerHTML =
+    stat("Nodes", nodes.length, rep.length + " of " + nodes.length + " reporting machines") +
+    stat("CPU", cores ? cores + " cores" : "—", cores ? Math.round((load / cores) * 100) + "% busy (1-min load)" : "") +
+    stat("Memory", mem ? gb(mem) : "—", mem ? gb(free) + " free" : "") +
+    stat("Engines", engines || "—", engines ? "per node; WARP and peers cover blocks" : "") +
+    stat("Network health", avg === null ? "—" : avg + " / 100", scored.length + " peers scored · " + scored.filter((p) => p.health >= 85).length + " healthy, " + scored.filter((p) => p.health < 60).length + " poor");
+  const label = (p) => esc(p.name || p.id.slice(0, 8));
+  const list = (title, items, fmt, empty) => '<div class="rank"><h4>' + title + "</h4>" + (items.length ? "<ol>" + items.map((p) => "<li>" + label(p) + "<span>" + esc(fmt(p)) + "</span></li>").join("") + "</ol>" : '<div class="side-note">' + empty + "</div>") + "</div>";
+  const best = [...scored].sort((a, b) => b.health - a.health || (a.latencyMs || 9e9) - (b.latencyMs || 9e9)).slice(0, 5);
+  const worst = [...scored].filter((p) => p.health < 85).sort((a, b) => a.health - b.health).slice(0, 5);
+  const blockedNodes = nodes.filter((n) => (n.blocked || []).length).sort((a, b) => b.blocked.length - a.blocked.length).slice(0, 5);
+  $("ranks").innerHTML =
+    list("Best performing", best, (p) => p.health + " · " + (p.latencyMs ? p.latencyMs + " ms" : "—") + " · " + p.ok + "/" + (p.ok + p.fail) + " answered", "No peer has answered a search yet.") +
+    list("Needs attention", worst, (p) => p.health + " · answered " + Math.round((p.ok / (p.ok + p.fail)) * 100) + "%" + (p.latencyMs > 1000 ? " · slow " + p.latencyMs + " ms" : "") + ((p.blocked || []).length ? " · " + p.blocked.length + " blocked" : ""), "Every scored peer is healthy.") +
+    list("Most blocked", blockedNodes, (n) => n.blocked.length + " blocked: " + n.blocked.slice(0, 4).join(", ") + (n.blocked.length > 4 ? "…" : ""), "No node reports blocked engines.");
+}
+
 /* ---------- network ---------- */
 async function loadStatus() {
   try {
@@ -1187,21 +1259,31 @@ async function loadStatus() {
       stat("Page fetches for peers", s.serveScrapes ? "on" : "off", s.serveScrapes ? "verified peers may fetch via this node" : "opt in with HC_SERVE_SCRAPES");
     const blocked = (s.searxng && s.searxng.blocked) || {};
     const known = s.engines || [];
-    const all = [...new Set([...known, ...(s.warp ? known.map((e) => e + " warp") : []), ...Object.keys(blocked)])];
-    $("engines").innerHTML = all.length ? all.map((e) => {
-      const why = blocked[e];
-      return '<div class="engine"><span class="dot ' + (why ? "bad" : "") + '"></span>' + esc(e) + (why ? '<span class="why">' + esc(why) + "</span>" : "") + "</div>";
+    const groups = Object.assign({}, s.engineGroups || { web: known });
+    const chip = (e) => { const why = blocked[e]; return '<div class="engine"><span class="dot ' + (why ? "bad" : "") + '"></span>' + esc(e) + (why ? '<span class="why">' + esc(why) + "</span>" : "") + "</div>"; };
+    const order = ["web", "news", "images", "research", "developer", "packages", "videos", "social", "books", "music", "movies", "apps", "maps", "reference", "warp"];
+    const keys = Object.keys(groups).sort((a, b) => ((order.indexOf(a) + 99) % 99) - ((order.indexOf(b) + 99) % 99));
+    const engineTotal = new Set(keys.filter((k) => k !== "warp").flatMap((k) => groups[k])).size;
+    $("engineCount").textContent = engineTotal ? engineTotal + " engines" : "";
+    $("engines").innerHTML = keys.length ? keys.map((k) => {
+      const list = groups[k] || [], bad = list.filter((e) => blocked[e]).length;
+      return '<details class="egroup" data-g="' + esc(k) + '"' + (engineOpen.has(k) ? " open" : "") + '><summary>' + esc(groupLabel[k] || k) +
+        '<span class="n">' + list.length + (list.length === 1 ? " engine" : " engines") + (bad ? " · " + bad + " blocked" : "") + "</span></summary>" +
+        '<div class="engines">' + list.map(chip).join("") + "</div></details>";
     }).join("") : '<div class="side-note">No engine data yet — run a search.</div>';
+    $("engines").querySelectorAll(".egroup").forEach((d) => (d.ontoggle = () => { d.open ? engineOpen.add(d.dataset.g) : engineOpen.delete(d.dataset.g); }));
     const name = (id) => { const p = peers.find((x) => x.id === id); return p ? p.name || id.slice(0, 8) : id.slice(0, 8); };
+    renderPool(s, peers);
     $("peers").innerHTML = peers.length ? peers.map((p) => {
       const route = p.tunneled ? '<span class="badge peer">tunnel → here</span>' : p.url ? '<span class="tag">' + esc(host(p.url)) + "</span>" : p.via ? '<span class="badge">via ' + esc(name(p.via)) + "</span>" : "—";
       const n = p.ok + p.fail, rate = n ? Math.round((p.ok / n) * 100) : null;
       return "<tr><td><strong>" + esc(p.name || p.id.slice(0, 8)) + "</strong> <span class='tag'>" + esc(p.id.slice(0, 8)) + "</span></td>" +
+        "<td>" + healthBadge(p) + "</td><td class='num'>" + machine(p.res) + "</td>" +
         "<td>" + route + "</td><td>" + (p.verified ? '<span class="badge peer">verified</span>' : '<span class="badge">trial</span>') + (p.scrapes ? ' <span class="badge warp">fetches pages</span>' : "") + "</td>" +
         "<td class='num'>" + (rate === null ? "—" : '<span class="bar"><i style="width:' + rate + '%"></i></span>' + p.ok + "/" + n) + "</td>" +
         "<td class='num'>" + p.asked + " / " + p.served + "</td><td class='num'>" + (p.priority || 1).toFixed(2) + "×</td>" +
         "<td class='num'>" + (p.checks ? Math.round(p.agreement * 100) + "%" : "—") + "</td><td class='num'>" + (p.latencyMs ? p.latencyMs + " ms" : "—") + "</td><td class='num'>" + since(p.onlineSince) + "</td></tr>";
-    }).join("") : '<tr><td colspan="9" style="color:var(--muted)">No peers yet. Set HC_PEERS and HC_NETWORK_KEY to join a network.</td></tr>';
+    }).join("") : '<tr><td colspan="11" style="color:var(--muted)">No peers yet. Set HC_PEERS and HC_NETWORK_KEY to join a network.</td></tr>';
     renderUpdate(s.update);
     $("nodeLabel").textContent = s.node; $("nodeSub").textContent = (s.network === "community" ? "Community" : s.network === "private" ? "Private" : "Standalone") + " · " + peers.length + (peers.length === 1 ? " peer" : " peers");
   } catch (err) {

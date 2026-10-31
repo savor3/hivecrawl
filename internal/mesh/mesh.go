@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"math/rand/v2"
 	"net"
 	"net/http"
@@ -90,6 +91,8 @@ type Options struct {
 	// Blocked reports this node's currently blocked engines; it is shared
 	// in hellos so peers send those engines elsewhere.
 	Blocked func() []string
+	// Resources reports this machine for hellos (nil: not shared).
+	Resources func() Resources
 	// NoIPLimits turns off per-IP limits: only for simulations where every
 	// node shares 127.0.0.1.
 	NoIPLimits bool
@@ -137,6 +140,11 @@ type Peer struct {
 	Asked     int   `json:"asked"`  // searches we sent to them
 	Served    int   `json:"served"` // searches we answered for them
 	LatencyMs int64 `json:"latencyMs,omitempty"`
+	// Res is the machine the peer reported (cores, memory, engines).
+	Res *Resources `json:"res,omitempty"`
+	// Health is our 0..100 score of the peer, -1 before we have asked it
+	// anything (see health).
+	Health int `json:"health"`
 }
 
 // behindNAT reports whether the peer has no public address.
@@ -159,6 +167,7 @@ type Mesh struct {
 	probeLocal   LocalSearch
 	probeAnswers *probeStore
 	blocked      func() []string
+	resources    func() Resources
 	limit        *limiter
 	ipLimit      *limiter
 	baseRate     int
@@ -210,7 +219,7 @@ func New(o Options) *Mesh {
 	}
 	return &Mesh{
 		id: o.Identity, self: o.Identity.ID, name: o.Name, publicURL: o.PublicURL, seeds: o.Peers, key: o.Key, dataDir: o.DataDir,
-		dialer: o.Dialer, client: o.Client, local: o.Local, probeLocal: o.ProbeLocal, blocked: o.Blocked,
+		dialer: o.Dialer, client: o.Client, local: o.Local, probeLocal: o.ProbeLocal, blocked: o.Blocked, resources: o.Resources,
 		limit: newLimiter(), ipLimit: newLimiter(), baseRate: o.PeerRate, slots: make(slots, max(o.MaxConcurrent, 1)),
 		wantTunnels: o.Tunnels, maxTunnels: o.MaxTunnels, gossipEvery: o.GossipEvery, noIPLimits: o.NoIPLimits,
 		serveScrape: o.ServeScrapes && o.FetchRaw != nil, fetchRaw: o.FetchRaw,
@@ -377,12 +386,13 @@ func (m *Mesh) Peers() []Peer {
 		cp.Served = m.served[p.ID]
 		cp.Priority = m.priorityLocked(p.ID)
 		cp.Verified = m.verifiedLocked(p.ID)
+		cp.Health = health(p)
 		out = append(out, cp)
 	}
 	// Nodes that reached us only through a relay are not in the peer table.
 	for id, n := range m.served {
 		if _, ok := m.peers[id]; !ok && time.Since(m.servedAt[id]) <= peerExpiry {
-			out = append(out, Peer{ID: id, Served: n, Priority: m.priorityLocked(id), Verified: m.verifiedLocked(id)})
+			out = append(out, Peer{ID: id, Served: n, Priority: m.priorityLocked(id), Verified: m.verifiedLocked(id), Health: -1})
 		}
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
@@ -406,6 +416,10 @@ func (m *Mesh) reachable(p *Peer) bool {
 // Candidates returns peers to ask, best first: NAT'd (home) nodes, which
 // engines block less, then by track record. Random jitter spreads load so
 // thousands of nodes do not all pick the same few peers. Suspects go last.
+// exploreBonus is the head start of a peer never asked: enough to rank it
+// above proven peers until it has answered a handful of searches.
+const exploreBonus = 0.6
+
 func (m *Mesh) Candidates() []Peer {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -419,9 +433,14 @@ func (m *Mesh) Candidates() []Peer {
 			continue
 		}
 		s := 0.7 // unknown track record
-		if n := p.OK + p.Fail; n > 0 {
+		n := p.OK + p.Fail
+		if n > 0 {
 			s = float64(p.OK) / float64(n)
 		}
+		// Peers we have rarely asked get a bonus that fades as they answer,
+		// so a new node is tried and earns a record instead of always
+		// losing to proven ones (as in UCB exploration).
+		s += exploreBonus / math.Sqrt(float64(n+1))
 		if p.behindNAT() {
 			s += 1
 		}
@@ -460,14 +479,15 @@ func (m *Mesh) ReportAgreement(id string, agreement float64) {
 // ---- gossip ----
 
 type helloMsg struct {
-	ID         string   `json:"id"`
-	Proto      int      `json:"proto,omitempty"`
-	Scrapes    bool     `json:"scrapes,omitempty"`
-	Name       string   `json:"name,omitempty"`
-	URL        string   `json:"url,omitempty"`
-	Blocked    []string `json:"blocked,omitempty"`
-	Tunnels    int      `json:"tunnels,omitempty"`
-	MaxTunnels int      `json:"maxTunnels,omitempty"`
+	ID         string     `json:"id"`
+	Proto      int        `json:"proto,omitempty"`
+	Scrapes    bool       `json:"scrapes,omitempty"`
+	Name       string     `json:"name,omitempty"`
+	URL        string     `json:"url,omitempty"`
+	Blocked    []string   `json:"blocked,omitempty"`
+	Tunnels    int        `json:"tunnels,omitempty"`
+	MaxTunnels int        `json:"maxTunnels,omitempty"`
+	Res        *Resources `json:"res,omitempty"`
 }
 
 func (m *Mesh) selfHello() helloMsg {
@@ -478,7 +498,17 @@ func (m *Mesh) selfHello() helloMsg {
 	if m.publicURL != "" {
 		h.Tunnels, h.MaxTunnels = m.TunnelCount(), m.maxTunnels
 	}
+	h.Res = m.Self()
 	return h
+}
+
+// Self is this node's own resources, as its hellos report them.
+func (m *Mesh) Self() *Resources {
+	if m.resources == nil {
+		return nil
+	}
+	r := m.resources()
+	return &r
 }
 
 type helloResp struct {
@@ -584,7 +614,7 @@ func (m *Mesh) learn(url string, hr helloResp) {
 		return
 	}
 	src.URL, src.Via, src.Name, src.Proto, src.Scrapes = url, "", hr.Self.Name, hr.Self.Proto, hr.Self.Scrapes
-	src.Blocked, src.Tunnels, src.MaxTunnels = hr.Self.Blocked, hr.Self.Tunnels, hr.Self.MaxTunnels
+	src.Blocked, src.Tunnels, src.MaxTunnels, src.Res = hr.Self.Blocked, hr.Self.Tunnels, hr.Self.MaxTunnels, hr.Self.Res
 	contacted(src)
 	for _, p := range hr.Peers {
 		if p.ID == "" || p.ID == m.self {
@@ -601,6 +631,9 @@ func (m *Mesh) learn(url string, hr helloResp) {
 			known.Name = p.Name
 		}
 		known.Blocked = p.Blocked
+		if p.Res != nil {
+			known.Res = p.Res
+		}
 		if p.Proto > 0 {
 			known.Proto, known.Scrapes = p.Proto, p.Scrapes
 		}
@@ -671,7 +704,7 @@ func (m *Mesh) handleHello(w http.ResponseWriter, r *http.Request) {
 		if h.URL != "" && !p.Tunneled {
 			p.URL, p.Via = h.URL, ""
 		}
-		p.Name, p.Blocked, p.Tunnels, p.MaxTunnels, p.Proto, p.Scrapes = h.Name, h.Blocked, h.Tunnels, h.MaxTunnels, h.Proto, h.Scrapes
+		p.Name, p.Blocked, p.Tunnels, p.MaxTunnels, p.Proto, p.Scrapes, p.Res = h.Name, h.Blocked, h.Tunnels, h.MaxTunnels, h.Proto, h.Scrapes, h.Res
 		contacted(p)
 	}
 	var direct, tunneled []Peer
@@ -683,9 +716,9 @@ func (m *Mesh) handleHello(w http.ResponseWriter, r *http.Request) {
 		case p.URL != "" && time.Since(p.contactAt) <= peerExpiry:
 			// Only nodes we reached ourselves: passing on second-hand
 			// addresses would keep dead nodes alive across the network.
-			direct = append(direct, Peer{ID: p.ID, Name: p.Name, URL: p.URL, Blocked: p.Blocked, Tunnels: p.Tunnels, MaxTunnels: p.MaxTunnels, Proto: p.Proto, Scrapes: p.Scrapes})
+			direct = append(direct, Peer{ID: p.ID, Name: p.Name, URL: p.URL, Blocked: p.Blocked, Tunnels: p.Tunnels, MaxTunnels: p.MaxTunnels, Proto: p.Proto, Scrapes: p.Scrapes, Res: p.Res})
 		case p.Tunneled && m.tunnels[p.ID] != nil:
-			tunneled = append(tunneled, Peer{ID: p.ID, Name: p.Name, Blocked: p.Blocked, Proto: p.Proto, Scrapes: p.Scrapes})
+			tunneled = append(tunneled, Peer{ID: p.ID, Name: p.Name, Blocked: p.Blocked, Proto: p.Proto, Scrapes: p.Scrapes, Res: p.Res})
 		}
 	}
 	m.mu.Unlock()

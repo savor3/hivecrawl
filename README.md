@@ -58,6 +58,23 @@ proxies on demand, or features listed under [where Firecrawl is better](#hivecra
 
 ---
 
+## What's new in 0.4.5
+
+- **115 search engines instead of 19.** Ordinary web searches now also ask Yandex, Yahoo, Naver, Mwmbl, YaCy,
+  360Search, GMX and Fynd (each scored at least 95% relevant results in our tests), so a search still comes back
+  full when the big engines block a node. Image search gained 17 engines and news one more.
+- **Search categories**, as in Firecrawl: `"categories": ["research"]` asks arXiv, PubMed, Europe PMC, Crossref,
+  OpenAlex and others; `developer` asks GitHub, GitLab, Stack Overflow, MDN, Microsoft Learn, Hacker News and more;
+  `pdf` returns only PDF files. HiveCrawl adds `packages`, `videos`, `social`, `books`, `music`, `movies`, `apps`,
+  `maps` and `reference`, and `all` for the web plus every category at once. These engines never mix into
+  ordinary results. Pick one from the **Category** menu on the Search page, or pass `categories` to the MCP tool.
+- **Network health.** Each peer gets a 0–100 health score (answers 40%, speed 20%, agreement with other routes
+  20%, engines not blocked 20%), and the Network page ranks the best-performing, struggling and most-blocked nodes.
+- **Pool totals.** Nodes now report their cores, memory and load, and the Network page adds them up for the whole
+  network. Engines are listed by group, with what is blocked on this node.
+- **New nodes get tried.** Peers with little history get a head start that fades as they answer, so a new node
+  is asked searches and earns a record instead of always losing to established ones.
+
 ## What's new in 0.4.4
 
 - **A slow DNS server no longer looks like a missing website.** A scrape stops straight away only when DNS says the
@@ -532,6 +549,7 @@ Tested with the official SDKs — `firecrawl-py` 4.54 and `@mendable/firecrawl-j
 |---|---|
 | `POST /v2/search`, `POST /v1/search` | ✅ `query`, `limit` (≤100), `tbs` (`qdr:h/d/w/m/y`), `lang`, `country`, `includeDomains`, `excludeDomains`, `ignoreInvalidURLs`, `timeout`, `scrapeOptions` |
 | search `sources` | ✅ `web`, `news` (with dates and thumbnails), `images` (with sizes) |
+| search `categories` | ✅ `research`, `developer` (and the older `github`), `pdf`; results carry `category`. ❌ `gov`. Extensions: `packages`, `videos`, `social`, `books`, `music`, `movies`, `apps`, `maps`, `reference`, `web`, `all` |
 | `POST /v2/scrape`, `POST /v1/scrape` | ✅ formats `markdown`, `html`, `rawHtml`, `links`, `screenshot` (`@fullPage`), `json`, `summary`; `onlyMainContent`, `includeTags`, `excludeTags`, `waitFor`, `mobile`, `actions`, `timeout`; PDF and DOCX |
 | `POST /v2/crawl`, `GET/DELETE /v2/crawl/{id}`, `/errors`, `/ongoing` | ✅ |
 | `POST /v2/batch/scrape` and status | ✅ |
@@ -611,7 +629,7 @@ All settings are environment variables (see `.env.example`).
 | `SEARXNG_SECRET` | random on each start | SearXNG's secret key |
 | `HC_MIN_RESULTS` | `8` | Fewer local results than this triggers WARP and peers |
 | `HC_WARP` | `true` | Retry blocked engines through Cloudflare WARP |
-| `HC_ENGINES` | `google cse,brave,duckduckgo,startpage,mojeek` | Direct engines; must match `deploy/searxng/settings.yml` |
+| `HC_ENGINES` | `google cse,brave,duckduckgo,yandex,yahoo,naver,mwmbl,yacy,360search,gmx,fynd` | Direct engines; must match `deploy/searxng/settings.yml` |
 | `HC_CACHE_TTL` / `HC_CACHE_SIZE` | `1h` / `5000` | Result cache |
 | `HC_PEER_RATE` | `30` | Base searches/minute one peer may ask (contributors earn up to 3×) |
 | `HC_MAX_CONCURRENT` | `4` | Peer searches served at once |

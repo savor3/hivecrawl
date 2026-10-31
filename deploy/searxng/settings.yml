@@ -14,6 +14,15 @@ use_default_settings:
       - startpage
       - mojeek
       - wikipedia
+      # more web indexes; each scored >=95% relevant on test queries
+      - yandex
+      - yahoo
+      - naver
+      - mwmbl
+      - yacy
+      - 360search
+      - gmx
+      - fynd
       # images (sources: ["images"])
       - google images
       - brave.images
@@ -21,6 +30,24 @@ use_default_settings:
       - startpage images
       - mojeek images
       - wikicommons.images
+      - yandex images
+      - naver images
+      - baidu images
+      - quark images
+      - yacy images
+      - flickr
+      - openverse
+      - artic
+      - artstation
+      - ipernity
+      - pexels
+      - stocksnap
+      - picjumbo
+      - magnific
+      - shopify stock
+      - pixabay images
+      - public domain image archive
+      - 500px
       # news (sources: ["news"]); these carry publish dates
       - google news
       - brave.news
@@ -29,6 +56,92 @@ use_default_settings:
       - yahoo news
       - mojeek news
       - wikinews
+      - naver news
+      # specialist engines for categories (node.Topics); disabled below so
+      # they only run when a category search names them
+      - arxiv
+      - pubmed
+      - europepmc
+      - crossref
+      - openalex
+      - openairepublications
+      - openairedatasets
+      - pdbe
+      - github
+      - gitlab
+      - codeberg
+      - gitea.com
+      - sourcehut
+      - stackoverflow
+      - superuser
+      - askubuntu
+      - mdn
+      - microsoft learn
+      - hackernews
+      - discuss.python
+      - caddy.community
+      - pi-hole.community
+      - mankier
+      - hoogle
+      - gentoo
+      - nixos wiki
+      - national vulnerability database
+      - huggingface
+      - npm
+      - pkg.go.dev
+      - crates.io
+      - lib.rs
+      - hex
+      - packagist
+      - pub.dev
+      - docker hub
+      - alpine linux packages
+      - voidlinux
+      - cachy os packages
+      - huggingface datasets
+      - huggingface spaces
+      - youtube
+      - vimeo
+      - dailymotion
+      - sepiasearch
+      - odysee
+      - media.ccc.de
+      - bilibili
+      - acfun
+      - iqiyi
+      - 360search videos
+      - sogou videos
+      - wikicommons.videos
+      - pixabay videos
+      - lemmy posts
+      - lemmy comments
+      - lemmy communities
+      - lemmy users
+      - mastodon users
+      - mastodon hashtags
+      - boardreader
+      - openlibrary
+      - wikibooks
+      - wikisource
+      - wikiquote
+      - genius
+      - deezer
+      - soundcloud
+      - mixcloud
+      - radio browser
+      - wikicommons.audio
+      - fyyd
+      - imdb
+      - rottentomatoes
+      - apple app store
+      - google play apps
+      - fdroid
+      - steam
+      - photon
+      - wiktionary
+      - wikivoyage
+      - wikiversity
+      - wikispecies
     # Not bing: it serves scrapers plausible-looking but unrelated results
     # instead of blocking them, which poisons merged results.
 server:
@@ -57,6 +170,236 @@ engines:
     inactive: false  # default inactive; one more news engine on the direct route
   - name: wikinews
     disabled: false
+  - name: yandex
+    disabled: false
+  - name: yahoo
+    disabled: false
+  - name: naver
+    disabled: false
+  - name: mwmbl
+    disabled: false
+  - name: yacy
+    disabled: false
+  - name: 360search
+    disabled: false
+    timeout: 4.0  # default is far longer and holds up the whole search
+  - name: gmx
+    disabled: false
+  - name: fynd
+    disabled: false
+  - name: yandex images
+    disabled: false
+  - name: naver images
+    disabled: false
+  - name: baidu images
+    disabled: false
+  - name: quark images
+    disabled: false
+  - name: yacy images
+    disabled: false
+  - name: flickr
+    disabled: false
+  - name: openverse
+    disabled: false
+  - name: artic
+    disabled: false
+  - name: artstation
+    disabled: false
+  - name: ipernity
+    disabled: false
+  - name: pexels
+    disabled: false
+    categories: [images]
+  - name: stocksnap
+    disabled: false
+    categories: [images]
+  - name: picjumbo
+    disabled: false
+    categories: [images]
+  - name: magnific
+    disabled: false
+    categories: [images]
+  - name: shopify stock
+    disabled: false
+    categories: [images]
+  - name: pixabay images
+    disabled: false
+    categories: [images]
+  - name: public domain image archive
+    disabled: false
+  - name: 500px
+    disabled: false
+    categories: [images]
+  - name: naver news
+    disabled: false
+  # category engines: kept, but never part of an ordinary search
+  - name: arxiv
+    disabled: true
+  - name: pubmed
+    disabled: true
+  - name: europepmc
+    disabled: true
+  - name: crossref
+    disabled: true
+    timeout: 6.0  # default is far longer and holds up the whole search
+  - name: openalex
+    disabled: true
+  - name: openairepublications
+    disabled: true
+  - name: openairedatasets
+    disabled: true
+  - name: pdbe
+    disabled: true
+  - name: github
+    disabled: true
+  - name: gitlab
+    disabled: true
+  - name: codeberg
+    disabled: true
+  - name: gitea.com
+    disabled: true
+  - name: sourcehut
+    disabled: true
+  - name: stackoverflow
+    disabled: true
+  - name: superuser
+    disabled: true
+  - name: askubuntu
+    disabled: true
+  - name: mdn
+    disabled: true
+  - name: microsoft learn
+    disabled: true
+  - name: hackernews
+    disabled: true
+  - name: discuss.python
+    disabled: true
+  - name: caddy.community
+    disabled: true
+  - name: pi-hole.community
+    disabled: true
+  - name: mankier
+    disabled: true
+  - name: hoogle
+    disabled: true
+  - name: gentoo
+    disabled: true
+  - name: nixos wiki
+    disabled: true
+  - name: national vulnerability database
+    disabled: true
+  - name: huggingface
+    disabled: true
+  - name: npm
+    disabled: true
+  - name: pkg.go.dev
+    disabled: true
+  - name: crates.io
+    disabled: true
+  - name: lib.rs
+    disabled: true
+  - name: hex
+    disabled: true
+  - name: packagist
+    disabled: true
+  - name: pub.dev
+    disabled: true
+  - name: docker hub
+    disabled: true
+  - name: alpine linux packages
+    disabled: true
+  - name: voidlinux
+    disabled: true
+  - name: cachy os packages
+    disabled: true
+  - name: huggingface datasets
+    disabled: true
+  - name: huggingface spaces
+    disabled: true
+  - name: youtube
+    disabled: true
+  - name: vimeo
+    disabled: true
+  - name: dailymotion
+    disabled: true
+  - name: sepiasearch
+    disabled: true
+  - name: odysee
+    disabled: true
+  - name: media.ccc.de
+    disabled: true
+  - name: bilibili
+    disabled: true
+  - name: acfun
+    disabled: true
+  - name: iqiyi
+    disabled: true
+  - name: 360search videos
+    disabled: true
+  - name: sogou videos
+    disabled: true
+  - name: wikicommons.videos
+    disabled: true
+  - name: pixabay videos
+    disabled: true
+  - name: lemmy posts
+    disabled: true
+  - name: lemmy comments
+    disabled: true
+  - name: lemmy communities
+    disabled: true
+  - name: lemmy users
+    disabled: true
+  - name: mastodon users
+    disabled: true
+  - name: mastodon hashtags
+    disabled: true
+  - name: boardreader
+    disabled: true
+  - name: openlibrary
+    disabled: true
+  - name: wikibooks
+    disabled: true
+  - name: wikisource
+    disabled: true
+  - name: wikiquote
+    disabled: true
+  - name: genius
+    disabled: true
+  - name: deezer
+    disabled: true
+  - name: soundcloud
+    disabled: true
+  - name: mixcloud
+    disabled: true
+  - name: radio browser
+    disabled: true
+  - name: wikicommons.audio
+    disabled: true
+  - name: fyyd
+    disabled: true
+  - name: imdb
+    disabled: true
+  - name: rottentomatoes
+    disabled: true
+  - name: apple app store
+    disabled: true
+  - name: google play apps
+    disabled: true
+  - name: fdroid
+    disabled: true
+  - name: steam
+    disabled: true
+  - name: photon
+    disabled: true
+  - name: wiktionary
+    disabled: true
+  - name: wikivoyage
+    disabled: true
+  - name: wikiversity
+    disabled: true
+  - name: wikispecies
+    disabled: true
 
   # ---- WARP fallbacks (selected explicitly by HiveCrawl) ----
   - name: google cse warp

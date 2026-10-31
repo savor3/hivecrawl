@@ -13,6 +13,7 @@ import (
 	"io/fs"
 	"net"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -21,6 +22,7 @@ import (
 
 	"hivecrawl/internal/jobs"
 	"hivecrawl/internal/llm"
+	"hivecrawl/internal/mesh"
 	"hivecrawl/internal/node"
 	"hivecrawl/internal/scrape"
 	"hivecrawl/internal/settings"
@@ -222,6 +224,17 @@ func (s *Server) searchAll(ctx context.Context, p parsed) (results, error) {
 			if src != "web" {
 				r.Category = src
 			}
+			if src == "web" && len(p.topics) > 0 {
+				web, meta, err := s.searchTopics(ctx, p, r, limit)
+				mu.Lock()
+				defer mu.Unlock()
+				if err != nil {
+					errs = append(errs, "web: "+err.Error())
+					return
+				}
+				out.web, out.meta = web, meta
+				return
+			}
 			resp := s.Node.Search(ctx, r)
 			mu.Lock()
 			defer mu.Unlock()
@@ -251,6 +264,75 @@ func (s *Server) searchAll(ctx context.Context, p parsed) (results, error) {
 		s.scrapeResults(ctx, out.web, *p.scrape)
 	}
 	return out, nil
+}
+
+// searchTopics runs each requested category at once and interleaves their
+// results, each tagged with its category, as Firecrawl does.
+func (s *Server) searchTopics(ctx context.Context, p parsed, req types.SearchRequest, limit int) ([]fcWebResult, types.Meta, error) {
+	lists := make([][]fcWebResult, len(p.topics))
+	resps := make([]types.SearchResponse, len(p.topics))
+	var wg sync.WaitGroup
+	for i, t := range p.topics {
+		wg.Go(func() {
+			resps[i] = s.Node.Topic(ctx, req, t)
+			lists[i] = p.toWeb(resps[i].Data.Web, limit)
+			for j := range lists[i] {
+				lists[i][j].Category = t
+			}
+		})
+	}
+	wg.Wait()
+
+	var meta types.Meta
+	var errs, sources []string
+	for i, r := range resps {
+		if !r.Success {
+			errs = append(errs, p.topics[i]+": "+r.Error)
+			continue
+		}
+		if !slices.Contains(sources, r.Meta.Source) {
+			sources = append(sources, r.Meta.Source)
+		}
+		meta.Engines = union(meta.Engines, r.Meta.Engines)
+		meta.Blocked = union(meta.Blocked, r.Meta.Blocked)
+		meta.TookMs = max(meta.TookMs, r.Meta.TookMs)
+		meta.Retry = meta.Retry || r.Meta.Retry
+	}
+	if len(errs) == len(resps) {
+		return nil, meta, errors.New(strings.Join(errs, "; "))
+	}
+	meta.Source = strings.Join(sources, "+")
+
+	out := []fcWebResult{}
+	seen := map[string]bool{}
+	for i := 0; len(out) < limit; i++ {
+		more := false
+		for _, l := range lists {
+			if i >= len(l) {
+				continue
+			}
+			more = true
+			if r := l[i]; !seen[r.URL] && len(out) < limit {
+				seen[r.URL] = true
+				r.Position = len(out) + 1
+				out = append(out, r)
+			}
+		}
+		if !more {
+			break
+		}
+	}
+	return out, meta, nil
+}
+
+func union(a, b []string) []string {
+	out := slices.Clone(a)
+	for _, x := range b {
+		if !slices.Contains(out, x) {
+			out = append(out, x)
+		}
+	}
+	return out
 }
 
 func (s *Server) searchV2(w http.ResponseWriter, r *http.Request) {
@@ -287,9 +369,11 @@ func nonNil[T any](xs []T) []T {
 	return xs
 }
 
-func (s *Server) handleStatus(w http.ResponseWriter, _ *http.Request) {
+func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	mode, id, tunnels := "standalone", "", 0
 	var peers any = []any{}
+	res := mesh.HostResources()
+	res.Engines = s.Node.EngineCount(r.Context())
 	if s.Node.Mesh != nil && s.Node.Mesh.Enabled() {
 		mode = "home (behind NAT, tunnels out)"
 		if s.PublicURL != "" {
@@ -302,6 +386,8 @@ func (s *Server) handleStatus(w http.ResponseWriter, _ *http.Request) {
 		"id":           id,
 		"version":      Version,
 		"engines":      s.Node.Engines,
+		"engineGroups": s.Node.EngineGroups(r.Context()),
+		"res":          res,
 		"warp":         s.Node.Warp,
 		"tunnels":      tunnels,
 		"llm":          s.llmName(),
@@ -340,7 +426,7 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 
 // Version is reported to MCP clients and compared with the newest release;
 // release builds set it with -ldflags.
-var Version = "0.4.4"
+var Version = "0.4.5"
 
 func (s *Server) updateStatus() update.Status {
 	st := update.Status{Current: Version, Error: "update check is off (HC_UPDATE_CHECK=false)"}

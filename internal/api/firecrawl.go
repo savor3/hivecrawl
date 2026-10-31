@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"slices"
 	"strings"
 
+	"hivecrawl/internal/node"
 	"hivecrawl/internal/scrape"
 	"hivecrawl/internal/types"
 )
@@ -24,6 +26,7 @@ type fcSearchRequest struct {
 	Tbs               string           `json:"tbs"`
 	Filter            string           `json:"filter"`
 	Sources           json.RawMessage  `json:"sources"`
+	Categories        json.RawMessage  `json:"categories"`
 	Lang              string           `json:"lang"`
 	Country           string           `json:"country"`
 	Location          string           `json:"location"`
@@ -49,6 +52,8 @@ type fcWebResult struct {
 	RawHTML     string           `json:"rawHtml,omitempty"`
 	Links       []string         `json:"links,omitempty"`
 	Metadata    *scrape.Metadata `json:"metadata,omitempty"`
+	// Category is set when the request had categories (as Firecrawl does).
+	Category string `json:"category,omitempty"`
 	// date is not part of Firecrawl's web result; kept for MCP output only.
 	date string
 }
@@ -102,6 +107,7 @@ type fcError struct {
 type parsed struct {
 	req      types.SearchRequest
 	sources  []string
+	topics   []string // categories: web results come from these instead
 	include  []string
 	exclude  []string
 	validURL bool
@@ -130,6 +136,9 @@ func parseFirecrawl(in fcSearchRequest) (parsed, error) {
 		return p, err
 	}
 	p.sources = srcs
+	if p.topics, err = parseCategories(in.Categories); err != nil {
+		return p, err
+	}
 	if in.ScrapeOptions != nil {
 		sp, err := in.ScrapeOptions.toOptions()
 		if err != nil {
@@ -194,6 +203,46 @@ func parseSources(raw json.RawMessage) ([]string, error) {
 		names = []string{"web"}
 	}
 	return names, nil
+}
+
+// parseCategories reads Firecrawl's categories, like ["research"] or
+// [{"type":"pdf"}]; see node.Topics for what each one searches.
+func parseCategories(raw json.RawMessage) ([]string, error) {
+	if len(raw) == 0 || string(raw) == "null" {
+		return nil, nil
+	}
+	var names []string
+	if json.Unmarshal(raw, &names) != nil {
+		names = nil
+		var objs []struct {
+			Type string `json:"type"`
+		}
+		if err := json.Unmarshal(raw, &objs); err != nil {
+			return nil, fmt.Errorf(`categories must be like ["research"] or [{"type":"research"}]`)
+		}
+		for _, o := range objs {
+			names = append(names, o.Type)
+		}
+	}
+	var out []string
+	for _, n := range names {
+		n = strings.ToLower(strings.TrimSpace(n))
+		if n == node.TopicAll {
+			for _, t := range node.AllTopics() {
+				if !slices.Contains(out, t) {
+					out = append(out, t)
+				}
+			}
+			continue
+		}
+		if !node.IsTopic(n) {
+			return nil, fmt.Errorf("unknown category %q (use %s)", n, strings.Join(node.TopicNames(), ", "))
+		}
+		if !slices.Contains(out, n) {
+			out = append(out, n)
+		}
+	}
+	return out, nil
 }
 
 // tbsToTimeRange maps Google's tbs time filter, which Firecrawl passes

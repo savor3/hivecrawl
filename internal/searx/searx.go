@@ -23,7 +23,20 @@ type Client struct {
 	blocked map[string]string // engine -> reason it was blocked in its most recent query
 	lastOK  time.Time
 	lastErr string
+	known   map[string]bool // every engine this SearXNG has, enabled or not
+	catalog []Engine
+	knownAt time.Time
 }
+
+// Engine is one engine as SearXNG's /config lists it.
+type Engine struct {
+	Name       string   `json:"name"`
+	Enabled    bool     `json:"enabled"`
+	Categories []string `json:"categories"`
+}
+
+// knownTTL is how long the engine list from /config is trusted.
+const knownTTL = 10 * time.Minute
 
 func New(base string, c *http.Client) *Client {
 	return &Client{base: base, http: c, blocked: map[string]string{}}
@@ -53,6 +66,15 @@ type Outcome struct {
 }
 
 func (c *Client) Search(ctx context.Context, req types.SearchRequest) (Outcome, error) {
+	if len(req.Engines) > 0 {
+		// SearXNG ignores engine names it does not have, and when none are
+		// left it runs the whole category instead. A peer or WARP request
+		// for engines only newer nodes have must not turn into that.
+		req.Engines = c.Have(ctx, req.Engines)
+		if len(req.Engines) == 0 {
+			return Outcome{}, nil
+		}
+	}
 	q := url.Values{}
 	q.Set("q", req.Query)
 	q.Set("format", "json")
@@ -137,6 +159,62 @@ func (c *Client) Search(ctx context.Context, req types.SearchRequest) (Outcome, 
 	c.lastErr = ""
 	c.mu.Unlock()
 	return out, nil
+}
+
+// Have returns the engines from names that this SearXNG has. If its engine
+// list cannot be read, names are returned unchanged.
+func (c *Client) Have(ctx context.Context, names []string) []string {
+	known := c.engines(ctx)
+	if known == nil {
+		return names
+	}
+	out := make([]string, 0, len(names))
+	for _, n := range names {
+		if known[n] {
+			out = append(out, n)
+		}
+	}
+	return out
+}
+
+func (c *Client) engines(ctx context.Context) map[string]bool {
+	c.mu.Lock()
+	known, fresh := c.known, time.Since(c.knownAt) < knownTTL
+	c.mu.Unlock()
+	if known != nil && fresh {
+		return known
+	}
+	r, err := http.NewRequestWithContext(ctx, http.MethodGet, c.base+"/config", nil)
+	if err != nil {
+		return known
+	}
+	resp, err := c.http.Do(r)
+	if err != nil {
+		return known
+	}
+	defer resp.Body.Close()
+	var cfg struct {
+		Engines []Engine `json:"engines"`
+	}
+	if resp.StatusCode != http.StatusOK || json.NewDecoder(io.LimitReader(resp.Body, 4<<20)).Decode(&cfg) != nil || len(cfg.Engines) == 0 {
+		return known
+	}
+	known = make(map[string]bool, len(cfg.Engines))
+	for _, e := range cfg.Engines {
+		known[e.Name] = true
+	}
+	c.mu.Lock()
+	c.known, c.catalog, c.knownAt = known, cfg.Engines, time.Now()
+	c.mu.Unlock()
+	return known
+}
+
+// Catalog lists every engine this SearXNG has (nil if unknown yet).
+func (c *Client) Catalog(ctx context.Context) []Engine {
+	c.engines(ctx)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.catalog
 }
 
 func (c *Client) fail(msg string) {
