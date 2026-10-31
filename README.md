@@ -60,6 +60,12 @@ proxies on demand, or features listed under [where Firecrawl is better](#hivecra
 
 ---
 
+## What's new in 0.4.10
+
+- **Faster web searches.** yacy and DuckDuckGo are out of ordinary web searches: from every node tested (servers, a
+  residential proxy, a home line) they timed out or answered CAPTCHA and found nothing, and each retry held
+  searches for the full timeout. They can still be asked for by name. 360search is capped at 2 s.
+
 ## What's new in 0.4.9
 
 - **Searches finish in seconds, even on a busy node.** A web search now has a 5 second budget, routes included:

@@ -88,7 +88,7 @@ func Load() (*Config, error) {
 		Network:             strings.ToLower(env("HC_NETWORK", "community")),
 		APIKeys:             list(env("HC_API_KEYS", "")),
 		SearxURL:            strings.TrimSuffix(env("HC_SEARXNG_URL", "http://127.0.0.1:8888"), "/"),
-		Engines:             list(env("HC_ENGINES", "google cse,brave,duckduckgo,yandex,yahoo,naver,mwmbl,yacy,360search,gmx,fynd")),
+		Engines:             list(env("HC_ENGINES", "google cse,brave,yandex,yahoo,naver,mwmbl,360search,gmx,fynd")),
 		Warp:                env("HC_WARP", "true") == "true",
 		WarpSocks:           env("HC_WARP_SOCKS", ""),
 		Browser:             env("HC_BROWSER", ""),

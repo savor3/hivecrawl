@@ -181,12 +181,18 @@ engines:
     disabled: false
   - name: mwmbl
     disabled: false
+  # yacy and duckduckgo time out or answer CAPTCHA from every node tested
+  # (servers, a residential proxy, a home line) and found nothing, while
+  # each retry held searches for the full timeout. Kept, so they can be
+  # asked for by name, but left out of ordinary searches.
   - name: yacy
-    disabled: false
-    timeout: 2.0  # often slow; never let it hold a search
+    disabled: true
+    timeout: 2.0
+  - name: duckduckgo
+    disabled: true
   - name: 360search
     disabled: false
-    timeout: 3.0  # default is far longer and holds up the whole search
+    timeout: 2.0  # default is far longer and holds up the whole search
   - name: gmx
     disabled: false
   - name: fynd
