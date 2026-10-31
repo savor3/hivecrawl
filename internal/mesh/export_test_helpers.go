@@ -6,6 +6,6 @@ func (m *Mesh) TestAddPeer(id string) {
 	defer m.mu.Unlock()
 	if p := m.peer(id); p != nil {
 		p.URL = "http://" + id + ".test"
-		seen(p)
+		contacted(p)
 	}
 }

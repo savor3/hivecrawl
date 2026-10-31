@@ -108,6 +108,11 @@ type Peer struct {
 	// Tunneled means this peer's tunnel terminates on this node.
 	Tunneled bool      `json:"tunneled,omitempty"`
 	LastSeen time.Time `json:"lastSeen,omitzero"`
+	// contactAt is our last direct exchange with this peer (our hello or
+	// search answered, its hello or a signed request to us). Hearing about
+	// a node from others never sets it, so a dead node can't be kept alive
+	// by nodes repeating it to each other.
+	contactAt time.Time
 	// OnlineSince is the start of the current unbroken stretch of contact.
 	OnlineSince time.Time `json:"onlineSince,omitzero"`
 	// Priority is the rate multiplier this peer has earned with us.
@@ -173,6 +178,8 @@ type Mesh struct {
 	peers   map[string]*Peer
 	tunnels map[string]*tunnelConn
 	served  map[string]int // by requester, including nodes we only see via relays
+	// servedAt is when each requester last asked us.
+	servedAt map[string]time.Time
 
 	verified map[string]time.Time // node -> proof of participation valid until
 	probing  map[string]time.Time // node -> last probe attempt
@@ -207,7 +214,7 @@ func New(o Options) *Mesh {
 		limit: newLimiter(), ipLimit: newLimiter(), baseRate: o.PeerRate, slots: make(slots, max(o.MaxConcurrent, 1)),
 		wantTunnels: o.Tunnels, maxTunnels: o.MaxTunnels, gossipEvery: o.GossipEvery, noIPLimits: o.NoIPLimits,
 		serveScrape: o.ServeScrapes && o.FetchRaw != nil, fetchRaw: o.FetchRaw,
-		peers: map[string]*Peer{}, tunnels: map[string]*tunnelConn{}, served: map[string]int{},
+		peers: map[string]*Peer{}, tunnels: map[string]*tunnelConn{}, served: map[string]int{}, servedAt: map[string]time.Time{},
 		verified: map[string]time.Time{}, probing: map[string]time.Time{}, probeAnswers: newProbeStore(o.DataDir),
 	}
 }
@@ -296,10 +303,16 @@ func seen(p *Peer) {
 	p.LastSeen = now
 }
 
+// contacted records a direct exchange with p. Caller holds mu.
+func contacted(p *Peer) {
+	p.contactAt = time.Now()
+	seen(p)
+}
+
 func (m *Mesh) touch(id string) {
 	m.mu.Lock()
 	if p, ok := m.peers[id]; ok {
-		seen(p)
+		contacted(p)
 	}
 	m.mu.Unlock()
 }
@@ -330,7 +343,7 @@ func (m *Mesh) addTunnel(t *tunnelConn, name string) {
 	if name != "" {
 		p.Name = name
 	}
-	seen(p)
+	contacted(p)
 }
 
 func (m *Mesh) removeTunnel(t *tunnelConn) {
@@ -357,6 +370,9 @@ func (m *Mesh) Peers() []Peer {
 	defer m.mu.Unlock()
 	out := make([]Peer, 0, len(m.peers))
 	for _, p := range m.peers {
+		if p.URL != "" && !p.Tunneled && p.contactAt.IsZero() {
+			continue // heard of but not reached yet; it may not exist any more
+		}
 		cp := *p
 		cp.Served = m.served[p.ID]
 		cp.Priority = m.priorityLocked(p.ID)
@@ -365,7 +381,7 @@ func (m *Mesh) Peers() []Peer {
 	}
 	// Nodes that reached us only through a relay are not in the peer table.
 	for id, n := range m.served {
-		if _, ok := m.peers[id]; !ok {
+		if _, ok := m.peers[id]; !ok && time.Since(m.servedAt[id]) <= peerExpiry {
 			out = append(out, Peer{ID: id, Served: n, Priority: m.priorityLocked(id), Verified: m.verifiedLocked(id)})
 		}
 	}
@@ -379,10 +395,10 @@ func (m *Mesh) reachable(p *Peer) bool {
 	case p.Tunneled:
 		return m.tunnels[p.ID] != nil
 	case p.URL != "":
-		return true
+		return !p.contactAt.IsZero() // not before we've reached it ourselves
 	case p.Via != "":
 		r, ok := m.peers[p.Via]
-		return ok && r.URL != ""
+		return ok && r.URL != "" && !r.contactAt.IsZero()
 	}
 	return false
 }
@@ -474,14 +490,25 @@ type helloResp struct {
 // know few), learning peers from each reply.
 func (m *Mesh) gossipOnce(ctx context.Context) {
 	m.mu.Lock()
-	var direct []string
+	type target struct {
+		url  string
+		last time.Time
+	}
+	var ts []target
 	for _, p := range m.peers {
 		if p.URL != "" && p.URL != m.publicURL {
-			direct = append(direct, p.URL)
+			ts = append(ts, target{p.URL, p.contactAt})
 		}
 	}
 	m.mu.Unlock()
-	rand.Shuffle(len(direct), func(i, j int) { direct[i], direct[j] = direct[j], direct[i] })
+	// Least recently reached first (never-reached nodes lead), so every
+	// live node is greeted before it would expire; ties in random order.
+	rand.Shuffle(len(ts), func(i, j int) { ts[i], ts[j] = ts[j], ts[i] })
+	sort.SliceStable(ts, func(i, j int) bool { return ts[i].last.Before(ts[j].last) })
+	direct := make([]string, len(ts))
+	for i, t := range ts {
+		direct[i] = t.url
+	}
 	if len(direct) > gossipFanout {
 		direct = direct[:gossipFanout]
 	}
@@ -558,7 +585,7 @@ func (m *Mesh) learn(url string, hr helloResp) {
 	}
 	src.URL, src.Via, src.Name, src.Proto, src.Scrapes = url, "", hr.Self.Name, hr.Self.Proto, hr.Self.Scrapes
 	src.Blocked, src.Tunnels, src.MaxTunnels = hr.Self.Blocked, hr.Self.Tunnels, hr.Self.MaxTunnels
-	seen(src)
+	contacted(src)
 	for _, p := range hr.Peers {
 		if p.ID == "" || p.ID == m.self {
 			continue
@@ -619,6 +646,7 @@ func (m *Mesh) expire() {
 		for id := range m.served {
 			if _, ok := m.peers[id]; !ok {
 				delete(m.served, id)
+				delete(m.servedAt, id)
 			}
 		}
 	}
@@ -644,7 +672,7 @@ func (m *Mesh) handleHello(w http.ResponseWriter, r *http.Request) {
 			p.URL, p.Via = h.URL, ""
 		}
 		p.Name, p.Blocked, p.Tunnels, p.MaxTunnels, p.Proto, p.Scrapes = h.Name, h.Blocked, h.Tunnels, h.MaxTunnels, h.Proto, h.Scrapes
-		seen(p)
+		contacted(p)
 	}
 	var direct, tunneled []Peer
 	for _, p := range m.peers {
@@ -652,7 +680,9 @@ func (m *Mesh) handleHello(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		switch {
-		case p.URL != "":
+		case p.URL != "" && time.Since(p.contactAt) <= peerExpiry:
+			// Only nodes we reached ourselves: passing on second-hand
+			// addresses would keep dead nodes alive across the network.
 			direct = append(direct, Peer{ID: p.ID, Name: p.Name, URL: p.URL, Blocked: p.Blocked, Tunnels: p.Tunnels, MaxTunnels: p.MaxTunnels, Proto: p.Proto, Scrapes: p.Scrapes})
 		case p.Tunneled && m.tunnels[p.ID] != nil:
 			tunneled = append(tunneled, Peer{ID: p.ID, Name: p.Name, Blocked: p.Blocked, Proto: p.Proto, Scrapes: p.Scrapes})
@@ -698,6 +728,7 @@ func (m *Mesh) serveSearch(ctx context.Context, from string, hint route, req typ
 	req.LocalOnly = true
 	m.mu.Lock()
 	m.served[from]++
+	m.servedAt[from] = time.Now()
 	m.mu.Unlock()
 	return m.local(ctx, req)
 }
@@ -817,6 +848,7 @@ func (m *Mesh) Ask(ctx context.Context, p Peer, req types.SearchRequest) (types.
 		} else {
 			q.OK++
 			q.LatencyMs = time.Since(start).Milliseconds()
+			contacted(q)
 		}
 	}
 	m.mu.Unlock()

@@ -58,6 +58,12 @@ proxies on demand, or features listed under [where Firecrawl is better](#hivecra
 
 ---
 
+## What's new in 0.4.3
+
+- **Nodes that go offline disappear from the Network page.** A node now lists, uses and passes on only peers it
+  has reached itself, so a node that shuts down drops off everywhere within a few minutes instead of being kept
+  alive by other nodes mentioning it. Blank rows for nodes that asked through a relay long ago are gone too.
+
 ## What's new in 0.4.2
 
 - **Peers are verified right away.** Each node now checks the nodes it knows
