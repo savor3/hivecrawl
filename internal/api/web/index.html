@@ -250,6 +250,34 @@ table.t td.num { font-family: var(--mono); font-size: 12.5px; }
   .live i, #peers tr td, .bump, .hscore { animation: none !important; }
   #peers tr.moving { transition: none; }
 }
+.mach { margin-bottom: 3px; }
+.insight { margin: 0 0 14px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--lift); }
+.insight.answer { font: 600 18px var(--mono); }
+.insight .lbl { display: block; margin-bottom: 4px; color: var(--muted); font: 600 11.5px var(--sans); text-transform: uppercase; letter-spacing: .05em; }
+.kpanel { display: flex; gap: 16px; align-items: flex-start; }
+.kpanel img { width: 96px; height: 96px; object-fit: cover; border-radius: 10px; flex: none; background: var(--surface-2); }
+.kpanel h3 { margin: 0 0 6px; font-size: 17px; }
+.kpanel p { margin: 0 0 8px; font-size: 14px; line-height: 1.5; }
+.kpanel dl { display: grid; grid-template-columns: max-content 1fr; gap: 3px 12px; margin: 0 0 6px; font-size: 13px; }
+.kpanel dt { color: var(--muted); }
+.kpanel dd { margin: 0; }
+.dym { margin: 0 0 12px; font-size: 14.5px; }
+.dym a, .related a { cursor: pointer; }
+.related { margin: 18px 0 4px; }
+.related .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.related a { padding: 6px 12px; border: 1px solid var(--border); border-radius: 99px; background: var(--surface); color: var(--text); font-size: 13.5px; text-decoration: none; }
+.related a:hover { border-color: var(--teal); color: var(--teal); }
+.agree { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 6px; background: var(--teal-soft); color: var(--teal); font-size: 11.5px; font-weight: 600; }
+@media (max-width: 560px) { .kpanel { flex-direction: column; } .kpanel img { width: 72px; height: 72px; } }
+.meter { display: inline-flex; align-items: center; gap: 4px; margin-right: 8px; font: 11px var(--mono); color: var(--muted); }
+.meter b { font-weight: 600; }
+.meter > span { display: inline-block; width: 38px; height: 5px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--teal); transition: width .8s ease; }
+.meter.warm i { background: var(--info); } .meter.hot i { background: var(--warn); }
+#peers tr.flash-api td { animation: flashapi 1.4s ease-out; }
+@keyframes flashapi { 0% { background: color-mix(in srgb, var(--info) 28%, transparent); } 100% { background: transparent; } }
+.bump.api { background: var(--info); color: #fff; right: 120px; }
+.key.api { background: var(--info); }
 .hscore { display: inline-block; min-width: 34px; text-align: center; padding: 2px 8px; border-radius: 99px; font: 600 12px var(--mono); }
 .hscore.good { background: var(--teal-soft); color: var(--teal); }
 .hscore.fair { background: var(--info-soft); color: var(--info); }
@@ -442,6 +470,7 @@ textarea.big { font-family: var(--sans); font-size: 15px; resize: vertical; min-
         </div>
         <div class="meta" id="searchMeta"></div>
         <div id="searchWarn"></div>
+        <div id="insightTop"></div>
         <div class="results" id="results">
           <div class="empty"><svg><use href="#i-search"/></svg><div>Results appear here. Try <a href="#" data-try="kerala monsoon forecast">kerala monsoon forecast</a> or <a href="#" data-try="go generics tutorial">go generics tutorial</a>.</div></div>
         </div>
@@ -623,8 +652,8 @@ textarea.big { font-family: var(--sans); font-size: 15px; resize: vertical; min-
     <p class="side-note" style="margin:-4px 0 12px">Web, News and Images engines run on every search of that kind. The others run only when a search asks for their category.</p>
     <div id="engines"></div>
     <h2>Peers</h2>
-    <p class="side-note" style="margin:-4px 0 12px">Ranked by health. A row lights up <span class="key out"></span>teal when this node sends that peer searches and <span class="key in"></span>amber when the peer asks this node.</p>
-    <div class="table-wrap"><table class="t"><thead><tr><th>Node</th><th>Health</th><th>Machine</th><th>Route</th><th>Status</th><th>Answered</th><th>Asked / served</th><th>Priority</th><th>Agreement</th><th>Latency</th><th>Online</th></tr></thead><tbody id="peers"></tbody></table></div>
+    <p class="side-note" style="margin:-4px 0 12px">Ranked by health. A row lights up <span class="key out"></span>teal when this node sends that peer searches, <span class="key in"></span>amber when the peer asks this node, and <span class="key api"></span>blue when it answers searches for anyone (its API, MCP or other peers). Machine stats travel with the nodes' gossip, so they refresh about every 30 seconds.</p>
+    <div class="table-wrap"><table class="t"><thead><tr><th>Node</th><th>Health</th><th>Machine</th><th>Searches</th><th>Route</th><th>Status</th><th>Answered</th><th>Asked / served</th><th>Priority</th><th>Agreement</th><th>Latency</th><th>Online</th></tr></thead><tbody id="peers"></tbody></table></div>
   </section>
 
   <!-- ===================== CONNECT ===================== -->
@@ -855,16 +884,43 @@ function engineTags(h) {
 const engineOpen = new Set(["web"]);
 const groupLabel = { web: "Web", news: "News", images: "Images", research: "Research papers", developer: "Developer", packages: "Packages & models", videos: "Videos", social: "Social & forums", books: "Books", music: "Music & podcasts", movies: "Movies", apps: "Apps", maps: "Places", reference: "Reference", warp: "WARP copies (used when a direct engine is blocked)" };
 const catLabel = (c) => { const o = [...$("cat").options].find((x) => x.value === c); return o ? o.textContent.replace(/ \(.*\)$/, "") : c; };
+// Insights: what the engines found besides results (see types.Insights).
+const searchFor = (q) => { $("q").value = q; $("searchForm").requestSubmit(); };
+function renderInsights(ins) {
+  if (!ins) return;
+  let h = "";
+  if ((ins.corrections || []).length) h += '<div class="dym">Did you mean ' + ins.corrections.map((c) => '<a data-q="' + esc(c) + '"><strong>' + esc(c) + "</strong></a>").join(" or ") + "?</div>";
+  for (const a of ins.answers || []) h += '<div class="insight answer"><span class="lbl">Answer</span>' + esc(a) + "</div>";
+  const b = ins.infobox;
+  if (b) {
+    const safeImg = /^https?:\/\//.test(b.imageUrl || "") ? b.imageUrl : "";
+    h += '<div class="insight kpanel">' + (safeImg ? '<img loading="lazy" referrerpolicy="no-referrer" src="' + esc(safeImg) + '" alt="">' : "") + "<div>" +
+      "<h3>" + esc(b.title) + "</h3>" + (b.content ? "<p>" + esc(b.content) + "</p>" : "") +
+      ((b.attributes || []).length ? "<dl>" + b.attributes.map((a) => "<dt>" + esc(a.label) + "</dt><dd>" + esc(a.value) + "</dd>").join("") + "</dl>" : "") +
+      (/^https?:\/\//.test(b.url || "") ? '<a href="' + esc(b.url) + '" target="_blank" rel="noopener noreferrer">' + esc(host(b.url)) + " ↗</a>" : "") +
+      (b.engine ? ' <span class="tag">' + esc(b.engine) + "</span>" : "") + "</div></div>";
+  }
+  $("insightTop").innerHTML = h;
+  $("insightTop").querySelectorAll("a[data-q]").forEach((a) => (a.onclick = () => searchFor(a.dataset.q)));
+}
+function relatedHTML(ins) {
+  const s = (ins && ins.suggestions) || [];
+  return s.length ? '<div class="related"><span class="lbl" style="display:block;margin-bottom:8px;color:var(--muted);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em">Related searches</span><div class="chips">' +
+    s.map((x) => '<a data-q="' + esc(x) + '">' + esc(x) + "</a>").join("") + "</div></div>" : "";
+}
+document.addEventListener("click", (e) => { const a = e.target.closest(".related a[data-q]"); if (a) searchFor(a.dataset.q); });
 let lastResults = [];
 $("searchForm").onsubmit = async (e) => {
   e.preventDefault();
   renderSearchCode();
   if (!$("q").value.trim()) { $("q").focus(); return; }
   const body = searchBody();
+  if (currentSrc === "web") body.insights = true; // related searches, answers, knowledge panel
   history.replaceState(null, "", "?q=" + encodeURIComponent(body.query) + "#search");
   $("searchBtn").disabled = true;
   $("searchMeta").textContent = body.scrapeOptions ? "Searching and fetching pages…" : "Searching…";
   $("searchWarn").innerHTML = "";
+  $("insightTop").innerHTML = "";
   $("results").innerHTML = '<div class="skeleton"></div>'.repeat(4);
   try {
     const d = await api("/v2/search", { method: "POST", body: JSON.stringify(body) });
@@ -876,6 +932,7 @@ $("searchForm").onsubmit = async (e) => {
     const count = currentSrc === "web" ? web.length : (others || []).length;
     $("searchMeta").innerHTML = "<strong>" + count + " results</strong><span>" + (took / 1000).toFixed(2) + "s</span>" + routeBadges(d._h.get("X-HC-Source")) + engineTags(d._h);
     $("searchWarn").innerHTML = d.warning ? '<div class="warning">' + esc(d.warning) + "</div>" : "";
+    renderInsights(d.data.insights);
     if (currentSrc === "news") { renderNews(d.data.news || []); return; }
     if (currentSrc === "images") { renderImages(d.data.images || []); return; }
     $("results").innerHTML = web.length ? web.map((r, i) => {
@@ -883,11 +940,12 @@ $("searchForm").onsubmit = async (e) => {
       const content = r.markdown ? '<details class="content"><summary>Page content · ' + (r.markdown.length / 1000).toFixed(1) + 'k chars</summary><div class="prose">' + md(r.markdown.slice(0, 20000)) + "</div></details>"
         : r.metadata && r.metadata.error ? '<details class="content"><summary>Could not fetch page</summary><div class="side-note">' + esc(r.metadata.error) + "</div></details>" : "";
       return '<article class="result"><div class="r-top"><div class="r-pos">' + (r.position || i + 1) + '</div><div class="favicon">' + esc(h.slice(0, 1)) + '</div><div class="r-body">' +
-        '<div class="r-host">' + esc(h) + (r.category ? ' <span class="tag">' + esc(catLabel(r.category)) + "</span>" : "") + "</div>" +
+        '<div class="r-host">' + esc(h) + (r.category ? ' <span class="tag">' + esc(catLabel(r.category)) + "</span>" : "") +
+        ((r.engines || []).length > 1 ? ' <span class="agree" title="Found by ' + esc(r.engines.join(", ")) + '">' + r.engines.length + " engines</span>" : "") + "</div>" +
         '<a class="r-title" href="' + esc(r.url) + '" target="_blank" rel="noopener noreferrer">' + esc(r.title || r.url) + "</a>" +
         '<p class="r-desc">' + esc(r.description) + "</p></div>" +
         '<div class="r-actions"><button class="btn small" data-scrape="' + i + '" title="Open in Scrape"><svg><use href="#i-doc"/></svg><span>Scrape</span></button></div></div>' + content + "</article>";
-    }).join("") : '<div class="empty">No results. Try different words, or turn off "This node only".</div>';
+    }).join("") + relatedHTML(d.data.insights) : '<div class="empty">No results. Try different words, or turn off "This node only".</div>' + relatedHTML(d.data.insights);
   } catch (err) {
     $("searchMeta").innerHTML = "";
     $("results").innerHTML = '<div class="err">' + esc(err.message) + "</div>";
@@ -1230,9 +1288,17 @@ function healthBadge(p) {
   return '<span class="hscore ' + cls + '" title="' + esc(tip) + '">' + h + "</span>";
 }
 const gb = (mb) => (mb >= 1024 ? (mb / 1024).toFixed(mb >= 10240 ? 0 : 1) + " GB" : mb + " MB");
+const meter = (label, pct, tip) => { const v = Math.max(0, Math.min(100, Math.round(pct))); return '<span class="meter' + (v >= 90 ? " hot" : v >= 70 ? " warm" : "") + '" title="' + esc(tip) + '"><b>' + label + '</b><span><i style="width:' + v + '%"></i></span>' + v + "%</span>"; };
 function machine(r) {
   if (!r || !r.cores) return '<span style="color:var(--muted)" title="Older version: does not report">—</span>';
-  return r.cores + " CPU · " + gb(r.memMb) + ' <span class="tag" title="1-minute load per core">' + Math.round(((r.load || 0) / r.cores) * 100) + "%</span>";
+  const used = r.memMb ? ((r.memMb - (r.memFreeMb || 0)) / r.memMb) * 100 : 0;
+  return '<div class="mach">' + r.cores + " CPU · " + gb(r.memMb) + "</div>" +
+    meter("CPU", ((r.load || 0) / r.cores) * 100, "1-minute load " + (r.load || 0).toFixed(2) + " on " + r.cores + " cores") +
+    meter("RAM", used, gb((r.memMb || 0) - (r.memFreeMb || 0)) + " used of " + gb(r.memMb || 0));
+}
+function rateCell(r) {
+  if (!r || !r.cores) return '<span style="color:var(--muted)">—</span>';
+  return '<span title="' + (r.searches || 0).toLocaleString() + ' since it started"><strong>' + (r.searchesPerMin || 0) + '</strong><span style="color:var(--muted)">/min</span></span>';
 }
 function renderPool(s, peers) {
   const nodes = [{ name: s.node + " (this node)", res: s.res, blocked: Object.keys((s.searxng && s.searxng.blocked) || {}) }, ...peers.filter((p) => p.name || p.url || p.tunneled || p.via)];
@@ -1246,7 +1312,8 @@ function renderPool(s, peers) {
   $("pool").innerHTML =
     stat("Nodes", nodes.length, rep.length + " of " + nodes.length + " reporting machines") +
     stat("CPU", cores ? cores + " cores" : "—", cores ? Math.round((load / cores) * 100) + "% busy (1-min load)" : "") +
-    stat("Memory", mem ? gb(mem) : "—", mem ? gb(free) + " free" : "") +
+    stat("Memory", mem ? gb(mem) : "—", mem ? gb(mem - free) + " used · " + Math.round(((mem - free) / mem) * 100) + "%" : "") +
+    stat("Searches / min", rep.length ? sum((r) => r.searchesPerMin).toLocaleString() : "—", rep.length ? sum((r) => r.searches).toLocaleString() + " answered since nodes started" : "") +
     stat("Engines", engines || "—", engines ? "per node; WARP and peers cover blocks" : "") +
     stat("Network health", avg === null ? "—" : avg + " / 100", scored.length + " peers scored · " + scored.filter((p) => p.health >= 85).length + " healthy, " + scored.filter((p) => p.health < 60).length + " poor");
   const label = (p) => esc(p.name || p.id.slice(0, 8));
@@ -1266,7 +1333,7 @@ function renderPool(s, peers) {
 let lastPeers = null;
 function animatePeers(peers, before) {
   const prev = lastPeers;
-  lastPeers = Object.fromEntries(peers.map((p) => [p.id, { asked: p.asked, served: p.served, health: p.health ?? -1 }]));
+  lastPeers = Object.fromEntries(peers.map((p) => [p.id, { asked: p.asked, served: p.served, health: p.health ?? -1, total: (p.res && p.res.searches) || 0 }]));
   if (!prev) return; // first draw: nothing to compare with
   $("peers").querySelectorAll("tr[data-id]").forEach((tr) => {
     const id = tr.dataset.id, was = prev[id], now = lastPeers[id];
@@ -1282,6 +1349,8 @@ function animatePeers(peers, before) {
     const out = now.asked - was.asked, inc = now.served - was.served, last = tr.lastElementChild;
     if (out > 0) { tr.classList.add("flash-out"); last.insertAdjacentHTML("beforeend", '<span class="bump out">+' + out + "</span>"); }
     if (inc > 0) { tr.classList.add("flash-in"); last.insertAdjacentHTML("beforeend", '<span class="bump in">+' + inc + "</span>"); }
+    const api = now.total - was.total;
+    if (api > 0 && was.total > 0) { tr.classList.add("flash-api"); last.insertAdjacentHTML("beforeend", '<span class="bump api">+' + api.toLocaleString() + "</span>"); }
     if (was.health >= 0 && now.health >= 0 && now.health !== was.health) tr.querySelector(".hscore")?.classList.add(now.health > was.health ? "up" : "down");
   });
 }
@@ -1331,12 +1400,12 @@ async function loadStatus() {
       const route = p.tunneled ? '<span class="badge peer">tunnel → here</span>' : p.url ? '<span class="tag">' + esc(host(p.url)) + "</span>" : p.via ? '<span class="badge">via ' + esc(name(p.via)) + "</span>" : "—";
       const n = p.ok + p.fail, rate = n ? Math.round((p.ok / n) * 100) : null;
       return '<tr data-id="' + esc(p.id) + '"><td><strong>' + esc(p.name || p.id.slice(0, 8)) + "</strong> <span class='tag'>" + esc(p.id.slice(0, 8)) + "</span></td>" +
-        "<td>" + healthBadge(p) + "</td><td class='num'>" + machine(p.res) + "</td>" +
+        "<td>" + healthBadge(p) + "</td><td class='num'>" + machine(p.res) + "</td><td class='num'>" + rateCell(p.res) + "</td>" +
         "<td>" + route + "</td><td>" + (p.verified ? '<span class="badge peer">verified</span>' : '<span class="badge">trial</span>') + (p.scrapes ? ' <span class="badge warp">fetches pages</span>' : "") + "</td>" +
         "<td class='num'>" + (rate === null ? "—" : '<span class="bar"><i style="width:' + rate + '%"></i></span>' + p.ok + "/" + n) + "</td>" +
         "<td class='num'>" + p.asked + " / " + p.served + "</td><td class='num'>" + (p.priority || 1).toFixed(2) + "×</td>" +
         "<td class='num'>" + (p.checks ? Math.round(p.agreement * 100) + "%" : "—") + "</td><td class='num'>" + (p.latencyMs ? p.latencyMs + " ms" : "—") + "</td><td class='num'>" + since(p.onlineSince) + "</td></tr>";
-    }).join("") : '<tr><td colspan="11" style="color:var(--muted)">No peers yet. Set HC_PEERS and HC_NETWORK_KEY to join a network.</td></tr>';
+    }).join("") : '<tr><td colspan="12" style="color:var(--muted)">No peers yet. Set HC_PEERS and HC_NETWORK_KEY to join a network.</td></tr>';
     animatePeers(peers, before);
     renderUpdate(s.update);
     $("nodeLabel").textContent = s.node; $("nodeSub").textContent = (s.network === "community" ? "Community" : s.network === "private" ? "Private" : "Standalone") + " · " + peers.length + (peers.length === 1 ? " peer" : " peers");

@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"hivecrawl/internal/types"
 )
@@ -59,14 +60,31 @@ type searxResponse struct {
 		Resolution    string   `json:"resolution"`
 	} `json:"results"`
 	// Each entry is [engine, reason].
-	Unresponsive [][]string `json:"unresponsive_engines"`
+	Unresponsive [][]string        `json:"unresponsive_engines"`
+	Suggestions  []string          `json:"suggestions"`
+	Corrections  []string          `json:"corrections"`
+	Answers      []json.RawMessage `json:"answers"`
+	Infoboxes    []struct {
+		Infobox string `json:"infobox"`
+		Content string `json:"content"`
+		ImgSrc  string `json:"img_src"`
+		Engine  string `json:"engine"`
+		URLs    []struct {
+			URL string `json:"url"`
+		} `json:"urls"`
+		Attributes []struct {
+			Label string `json:"label"`
+			Value any    `json:"value"`
+		} `json:"attributes"`
+	} `json:"infoboxes"`
 }
 
 // Outcome is one SearXNG answer. Results are in SearXNG's ranked order.
 type Outcome struct {
-	Results []types.Result
-	Engines []string
-	Blocked []string
+	Results  []types.Result
+	Engines  []string
+	Blocked  []string
+	Insights *types.Insights // nil when SearXNG had nothing extra
 }
 
 func (c *Client) Search(ctx context.Context, req types.SearchRequest) (Outcome, error) {
@@ -146,6 +164,8 @@ func (c *Client) Search(ctx context.Context, req types.SearchRequest) (Outcome, 
 			}
 		}
 	}
+	out.Results = sameScriptFirst(req.Query, out.Results)
+	out.Insights = insights(sr)
 	blocked := map[string]string{}
 	for _, u := range sr.Unresponsive {
 		if len(u) >= 2 {
@@ -290,4 +310,101 @@ func unlist(s string) string {
 		s = strings.TrimSuffix(strings.TrimSuffix(s, "]"), q)
 	}
 	return strings.ReplaceAll(s, `\'`, "'")
+}
+
+// maxSuggestions and maxAttributes keep insights small.
+const (
+	maxSuggestions = 8
+	maxAttributes  = 8
+)
+
+func insights(sr searxResponse) *types.Insights {
+	in := &types.Insights{Corrections: sr.Corrections}
+	if len(sr.Suggestions) > maxSuggestions {
+		sr.Suggestions = sr.Suggestions[:maxSuggestions]
+	}
+	in.Suggestions = sr.Suggestions
+	for _, raw := range sr.Answers {
+		// Newer SearXNG sends objects with an "answer"; older, plain strings.
+		var a struct {
+			Answer string `json:"answer"`
+		}
+		var text string
+		if json.Unmarshal(raw, &a) == nil && a.Answer != "" {
+			text = a.Answer
+		} else if json.Unmarshal(raw, &text) != nil {
+			continue
+		}
+		if text = strings.TrimSpace(text); text != "" {
+			in.Answers = append(in.Answers, text)
+		}
+	}
+	if len(sr.Infoboxes) > 0 {
+		b := sr.Infoboxes[0]
+		box := &types.Infobox{Title: b.Infobox, Content: b.Content, ImageURL: b.ImgSrc, Engine: b.Engine}
+		if len(b.URLs) > 0 {
+			box.URL = b.URLs[0].URL
+		}
+		for _, a := range b.Attributes {
+			if v, ok := a.Value.(string); ok && a.Label != "" && v != "" && len(box.Attributes) < maxAttributes {
+				box.Attributes = append(box.Attributes, types.Attribute{Label: a.Label, Value: v})
+			}
+		}
+		if box.Title != "" {
+			in.Infobox = box
+		}
+	}
+	if in.Empty() {
+		return nil
+	}
+	return in
+}
+
+// sameScriptFirst moves results whose title is written in another script
+// than the query (a Korean page for an English search, from engines like
+// Naver) after the rest, keeping order otherwise.
+func sameScriptFirst(query string, res []types.Result) []types.Result {
+	want := latinScript(query)
+	var keep, later []types.Result
+	for _, r := range res {
+		if latinScript(r.Title) == want || latinScript(r.Title) == scriptNone {
+			keep = append(keep, r)
+		} else {
+			later = append(later, r)
+		}
+	}
+	if len(later) == 0 {
+		return res
+	}
+	out := append(keep, later...)
+	for i := range out {
+		out[i].Position = i + 1
+	}
+	return out
+}
+
+const (
+	scriptNone  = iota // no letters
+	scriptLatin        // mostly Latin letters
+	scriptOther        // mostly other scripts
+)
+
+func latinScript(s string) int {
+	var latin, other int
+	for _, r := range s {
+		switch {
+		case !unicode.IsLetter(r):
+		case unicode.Is(unicode.Latin, r):
+			latin++
+		default:
+			other++
+		}
+	}
+	switch {
+	case latin+other == 0:
+		return scriptNone
+	case latin >= other:
+		return scriptLatin
+	}
+	return scriptOther
 }

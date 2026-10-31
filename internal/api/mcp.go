@@ -11,6 +11,8 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"hivecrawl/internal/types"
+
 	"hivecrawl/internal/llm"
 
 	"hivecrawl/internal/jobs"
@@ -36,6 +38,8 @@ type mcpSearchOut struct {
 	Web    []fcWebResult   `json:"web,omitempty"`
 	News   []fcNewsResult  `json:"news,omitempty"`
 	Images []fcImageResult `json:"images,omitempty"`
+	// Related searches, spelling fixes, instant answers, knowledge panel.
+	Insights *types.Insights `json:"insights,omitempty"`
 	// How the search was answered: route, engines used and engines blocked.
 	AnsweredBy string   `json:"answeredBy"`
 	Engines    []string `json:"engines,omitempty"`
@@ -115,6 +119,7 @@ func (s *Server) mcpServer() *mcp.Server {
 		req := fcSearchRequest{
 			Query: in.Query, Limit: in.Limit, Tbs: in.Tbs, Lang: in.Lang, Country: in.Country,
 			IncludeDomains: in.IncludeDomains, ExcludeDomains: in.ExcludeDomains, IgnoreInvalidURLs: true,
+			Insights: true,
 		}
 		if len(in.Sources) > 0 {
 			b, _ := json.Marshal(in.Sources)
@@ -152,7 +157,7 @@ func (s *Server) mcpServer() *mcp.Server {
 			return nil, mcpSearchOut{}, fmt.Errorf("temporarily unable to search: every engine and peer is blocked or rate limited; try again in a minute")
 		}
 		out := mcpSearchOut{
-			Web: res.web, News: res.news, Images: res.images, AnsweredBy: describeRoute(s.Node.Name, res.meta.Source),
+			Web: res.web, News: res.news, Images: res.images, Insights: res.insights, AnsweredBy: describeRoute(s.Node.Name, res.meta.Source),
 			Engines: res.meta.Engines, Blocked: res.meta.Blocked, TookMs: res.meta.TookMs,
 		}
 		return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: searchText(out, in.Tbs)}}}, out, nil
@@ -349,6 +354,27 @@ func searchText(out mcpSearchOut, tbs string) string {
 	if len(out.Web)+len(out.News)+len(out.Images) == 0 {
 		b.WriteString("No results.\n")
 	}
+	if in := out.Insights; in != nil {
+		for _, a := range in.Answers {
+			fmt.Fprintf(&b, "Answer: %s\n", a)
+		}
+		if len(in.Corrections) > 0 {
+			fmt.Fprintf(&b, "Did you mean: %s\n", strings.Join(in.Corrections, "; "))
+		}
+		if ib := in.Infobox; ib != nil {
+			fmt.Fprintf(&b, "About %s", ib.Title)
+			if ib.URL != "" {
+				fmt.Fprintf(&b, " (%s)", ib.URL)
+			}
+			fmt.Fprintf(&b, ": %s\n", ib.Content)
+			for _, a := range ib.Attributes {
+				fmt.Fprintf(&b, "  %s: %s\n", a.Label, a.Value)
+			}
+		}
+		if len(in.Answers)+len(in.Corrections) > 0 || in.Infobox != nil {
+			b.WriteString("\n")
+		}
+	}
 	for _, r := range out.News {
 		fmt.Fprintf(&b, "%d. %s\n   %s\n", r.Position, r.Title, r.URL)
 		if r.Date != "" {
@@ -389,6 +415,9 @@ func searchText(out mcpSearchOut, tbs string) string {
 	}
 	if tbs != "" && len(out.Web) > 0 {
 		b.WriteString(" Time filter: results with a known date outside the range were removed; undated results are listed last.")
+	}
+	if out.Insights != nil && len(out.Insights.Suggestions) > 0 {
+		fmt.Fprintf(&b, "Related searches: %s\n", strings.Join(out.Insights.Suggestions, "; "))
 	}
 	return b.String()
 }

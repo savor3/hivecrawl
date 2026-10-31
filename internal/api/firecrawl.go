@@ -40,6 +40,9 @@ type fcSearchRequest struct {
 	LocalOnly bool `json:"localOnly"`
 	// HiveCrawl extension: false turns off smart search (see node.Intents).
 	Smart *bool `json:"smart"`
+	// HiveCrawl extension: add data.insights (related searches, answers,
+	// knowledge panel) and each web result's engines.
+	Insights bool `json:"insights"`
 }
 
 // fcWebResult is Firecrawl's WebSearchResult. The page-content fields are
@@ -56,14 +59,17 @@ type fcWebResult struct {
 	Metadata    *scrape.Metadata `json:"metadata,omitempty"`
 	// Category is set when the request had categories (as Firecrawl does).
 	Category string `json:"category,omitempty"`
+	// Engines found this result (only with "insights": true).
+	Engines []string `json:"engines,omitempty"`
 	// date is not part of Firecrawl's web result; kept for MCP output only.
 	date string
 }
 
 type fcV2Data struct {
-	Web    []fcWebResult   `json:"web,omitempty"`
-	Images []fcImageResult `json:"images,omitempty"`
-	News   []fcNewsResult  `json:"news,omitempty"`
+	Web      []fcWebResult   `json:"web,omitempty"`
+	Images   []fcImageResult `json:"images,omitempty"`
+	News     []fcNewsResult  `json:"news,omitempty"`
+	Insights *types.Insights `json:"insights,omitempty"` // only with "insights": true
 }
 
 // fcImageResult is Firecrawl's ImageSearchResult.
@@ -111,6 +117,7 @@ type parsed struct {
 	sources  []string
 	topics   []string // categories: web results come from these instead
 	smart    bool     // mix in results from the categories the query suggests
+	insights bool     // return insights and per-result engines
 	include  []string
 	exclude  []string
 	validURL bool
@@ -157,6 +164,7 @@ func parseFirecrawl(in fcSearchRequest) (parsed, error) {
 	p.include = cleanDomains(in.IncludeDomains)
 	p.exclude = cleanDomains(in.ExcludeDomains)
 	p.validURL = in.IgnoreInvalidURLs
+	p.insights = in.Insights
 	p.smart = (in.Smart == nil || *in.Smart) && len(p.topics) == 0 && len(p.include) == 0
 	p.timeout = in.Timeout
 
@@ -333,7 +341,11 @@ func (p parsed) toWeb(res []types.Result, limit int) []fcWebResult {
 		if !p.keep(r.URL) {
 			continue
 		}
-		out = append(out, fcWebResult{URL: r.URL, Title: r.Title, Description: r.Description, Position: len(out) + 1, date: r.Date})
+		w := fcWebResult{URL: r.URL, Title: r.Title, Description: r.Description, Position: len(out) + 1, date: r.Date}
+		if p.insights {
+			w.Engines = r.Engines
+		}
+		out = append(out, w)
 		if len(out) == limit {
 			break
 		}

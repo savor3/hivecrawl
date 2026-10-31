@@ -84,3 +84,34 @@ type RawPage struct {
 	ContentType string `json:"contentType,omitempty"`
 	Body        []byte `json:"body"`
 }
+
+// Insights is what a search found besides results, from this node's own
+// engines: related searches, spelling fixes, instant answers (unit
+// conversion, hashes) and a knowledge panel.
+type Insights struct {
+	Suggestions []string `json:"suggestions,omitempty"`
+	Corrections []string `json:"corrections,omitempty"`
+	Answers     []string `json:"answers,omitempty"`
+	Infobox     *Infobox `json:"infobox,omitempty"`
+}
+
+// Empty reports whether there is nothing to show.
+func (i *Insights) Empty() bool {
+	return i == nil || len(i.Suggestions)+len(i.Corrections)+len(i.Answers) == 0 && i.Infobox == nil
+}
+
+// Infobox is a knowledge panel (usually from Wikipedia).
+type Infobox struct {
+	Title      string      `json:"title"`
+	Content    string      `json:"content,omitempty"`
+	ImageURL   string      `json:"imageUrl,omitempty"`
+	URL        string      `json:"url,omitempty"`
+	Engine     string      `json:"engine,omitempty"`
+	Attributes []Attribute `json:"attributes,omitempty"`
+}
+
+// Attribute is one fact in an infobox.
+type Attribute struct {
+	Label string `json:"label"`
+	Value string `json:"value"`
+}

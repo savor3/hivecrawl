@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"hivecrawl/internal/cache"
 	"hivecrawl/internal/types"
 )
 
@@ -53,6 +54,9 @@ const (
 	TopicWeb = "web"
 	// TopicAll asks for the web and every specialist category at once.
 	TopicAll = "all"
+	// TopicNews is the news search, which smart search mixes into web
+	// results for time-sensitive queries (callers ask for it as a source).
+	TopicNews = "news"
 )
 
 // IsTopic reports whether name is a category Topic can run.
@@ -91,6 +95,10 @@ func (n *Node) Topic(ctx context.Context, req types.SearchRequest, topic string)
 	start := time.Now()
 	req.Normalize()
 	if topic == TopicWeb {
+		return n.Search(ctx, req)
+	}
+	if topic == TopicNews {
+		req.Category = TopicNews
 		return n.Search(ctx, req)
 	}
 	if topic == TopicPDF {
@@ -184,4 +192,45 @@ func (n *Node) EngineCount(ctx context.Context) int {
 		}
 	}
 	return len(seen)
+}
+
+// insight is a search's insights and when they were found.
+type insight struct {
+	v  *types.Insights
+	at time.Time
+}
+
+const (
+	insightTTL = time.Hour
+	maxInsight = 2000
+)
+
+func (n *Node) keepInsights(key string, in *types.Insights) {
+	if in == nil {
+		return
+	}
+	n.insMu.Lock()
+	defer n.insMu.Unlock()
+	if len(n.insights) >= maxInsight {
+		for k, e := range n.insights {
+			if time.Since(e.at) > insightTTL || len(n.insights) >= maxInsight {
+				delete(n.insights, k)
+			}
+		}
+	}
+	n.insights[key] = insight{in, time.Now()}
+}
+
+// Insights returns what this node's own engines found besides results for
+// a public web search that has already run (nil if nothing).
+func (n *Node) Insights(req types.SearchRequest) *types.Insights {
+	req.Normalize()
+	req.Engines = nil
+	n.insMu.Lock()
+	defer n.insMu.Unlock()
+	e, ok := n.insights[cache.Key(req)]
+	if !ok || time.Since(e.at) > insightTTL {
+		return nil
+	}
+	return e.v
 }

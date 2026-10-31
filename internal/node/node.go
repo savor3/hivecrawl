@@ -51,10 +51,15 @@ type Node struct {
 	Engines []string
 	// Warp enables retrying blocked engines through their WARP copies.
 	Warp bool
+
+	insMu    sync.Mutex
+	insights map[string]insight // by cache key; see Insights
+
+	searches rate // searches answered, for the network's pool totals
 }
 
 func New(name string, c *cache.Cache, s *searx.Client, minResults int) *Node {
-	return &Node{Name: name, cache: c, searx: s, minResults: minResults}
+	return &Node{Name: name, cache: c, searx: s, minResults: minResults, insights: map[string]insight{}}
 }
 
 // Local answers from cache or this node's SearXNG; it never asks peers.
@@ -77,6 +82,7 @@ func (n *Node) Local(ctx context.Context, req types.SearchRequest) (types.Search
 	if len(out.Results) >= n.minResults {
 		n.cache.Put(key, out.Results, "local")
 	}
+	n.keepInsights(key, out.Insights)
 	return respond(out.Results, req.Limit, types.Meta{Source: "local", Engines: out.Engines, Blocked: out.Blocked}, start), nil
 }
 

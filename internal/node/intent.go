@@ -3,7 +3,9 @@ package node
 import (
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
+	"time"
 )
 
 // Smart search: an ordinary web search that clearly looks like code,
@@ -36,6 +38,12 @@ var intentWords = map[string][]string{
 	"books":  {"novel", "novels", "ebook", "e-book", "audiobook", "author of", "read online", "public domain"},
 	"apps":   {"apk", "android app", "ios app", "iphone app", "app store", "play store", "f-droid", "steam game"},
 	"social": {"reddit", "forum", "discussion", "opinions", "what do people think", "hacker news", "mastodon", "lemmy"},
+	// Time-sensitive searches get dated news (TopicNews).
+	TopicNews: {
+		"latest", "today", "yesterday", "this week", "breaking", "news", "announced", "announces", "launched",
+		"released", "release date", "price of", "stock price", "share price", "election", "lawsuit", "outage",
+		"acquisition", "acquires", "earnings", "update on",
+	},
 }
 
 // codeLike matches things only code has: calls, paths, operators,
@@ -60,6 +68,10 @@ func Intents(q string) []string {
 	}
 	if codeLike.MatchString(q) {
 		score["developer"] += 2
+	}
+	// This year or next in the query: it is about something recent.
+	if y := time.Now().Year(); containsWord(low, strconv.Itoa(y)) || containsWord(low, strconv.Itoa(y+1)) {
+		score[TopicNews]++
 	}
 	var out []string
 	for t, s := range score {

@@ -79,7 +79,12 @@ func main() {
 	n.Engines, n.Warp = cfg.Engines, cfg.Warp
 	n.Mesh = mesh.New(mesh.Options{
 		Identity: id, Name: cfg.NodeName, Tunnels: cfg.Tunnels, MaxTunnels: cfg.MaxTunnels, PublicURL: cfg.PublicURL, Peers: cfg.Peers, Key: cfg.NetworkKey, DataDir: cfg.DataDir,
-		PeerRate: cfg.PeerRate, MaxConcurrent: cfg.MaxConcurrent, Dialer: outDialer, Client: outClient, Local: n.Local,
+		PeerRate: cfg.PeerRate, MaxConcurrent: cfg.MaxConcurrent, Dialer: outDialer, Client: outClient,
+		// Searches peers ask for count toward this node's search rate.
+		Local: func(ctx context.Context, req types.SearchRequest) (types.SearchResponse, error) {
+			n.CountSearch()
+			return n.Local(ctx, req)
+		},
 		ProbeLocal: n.ProbeAnswer,
 		Blocked:    n.BlockedEngines,
 		Resources: func() mesh.Resources {
@@ -87,6 +92,7 @@ func main() {
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 			defer cancel()
 			r.Engines = n.EngineCount(ctx)
+			r.SearchesPerMin, r.Searches = n.SearchesPerMin(), n.SearchesTotal()
 			return r
 		},
 		// Opt-in: fetch pages for peers, with this node's own routes only.

@@ -58,6 +58,20 @@ proxies on demand, or features listed under [where Firecrawl is better](#hivecra
 
 ---
 
+## What's new in 0.4.8
+
+- **Insights.** The Search page shows a knowledge panel (Wikipedia summary, photo and link), instant answers
+  (unit conversion, hashes), "Did you mean", related searches you can click, and how many engines found each
+  result. API clients get them with `"insights": true` (`data.insights` and each result's `engines`); without it
+  the response is exactly Firecrawl's. The MCP search tool always includes them.
+- **Fresh news in web searches.** Time-sensitive searches ("latest…", "today", "announced", this year, prices,
+  earnings) mix in dated news results through smart search.
+- **Results in the query's language come first.** A page whose title is in another script than the query (a
+  Korean page for an English search) now ranks after the rest.
+- **Live machine and traffic stats.** Every node reports its CPU and memory use and how many searches it answered
+  in the last minute (API, MCP and for peers). The Network page shows them per node with meters, adds the
+  network's searches per minute, and flashes a node blue as it answers searches.
+
 ## What's new in 0.4.7
 
 - **Smart search.** An ordinary web search that clearly looks like code, research, a book, a song, a film and so
@@ -569,6 +583,7 @@ Tested with the official SDKs — `firecrawl-py` 4.54 and `@mendable/firecrawl-j
 | `POST /v2/search`, `POST /v1/search` | ✅ `query`, `limit` (≤100), `tbs` (`qdr:h/d/w/m/y`), `lang`, `country`, `includeDomains`, `excludeDomains`, `ignoreInvalidURLs`, `timeout`, `scrapeOptions` |
 | search `sources` | ✅ `web`, `news` (with dates and thumbnails), `images` (with sizes) |
 | search `categories` | ✅ `research`, `developer` (and the older `github`), `pdf`; results carry `category`. ❌ `gov`. Extensions: `packages`, `videos`, `social`, `books`, `music`, `movies`, `apps`, `maps`, `reference`, `web`, `all` |
+| search insights | HiveCrawl extension: `"insights": true` adds `data.insights` (related searches, corrections, answers, knowledge panel) and each result's `engines` |
 | smart search | HiveCrawl extension: web searches that look like code, research, books… mix in that category's results; `"smart": false` turns it off |
 | `POST /v2/scrape`, `POST /v1/scrape` | ✅ formats `markdown`, `html`, `rawHtml`, `links`, `screenshot` (`@fullPage`), `json`, `summary`; `onlyMainContent`, `includeTags`, `excludeTags`, `waitFor`, `mobile`, `actions`, `timeout`; PDF and DOCX |
 | `POST /v2/crawl`, `GET/DELETE /v2/crawl/{id}`, `/errors`, `/ongoing` | ✅ |

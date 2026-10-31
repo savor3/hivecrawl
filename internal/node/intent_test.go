@@ -3,6 +3,7 @@ package node
 import (
 	"slices"
 	"testing"
+	"time"
 )
 
 func TestIntents(t *testing.T) {
@@ -24,5 +25,13 @@ func TestIntents(t *testing.T) {
 	}
 	if got := Intents("python video tutorial with lyrics paper on arxiv"); len(got) != maxIntents {
 		t.Errorf("not capped: %v", got)
+	}
+}
+
+func TestNewsIntent(t *testing.T) {
+	for _, q := range []string{"latest nvidia earnings", "openai announced today", "best laptops " + time.Now().Format("2006")} {
+		if !slices.Contains(Intents(q), TopicNews) {
+			t.Errorf("Intents(%q) = %v, want news", q, Intents(q))
+		}
 	}
 }

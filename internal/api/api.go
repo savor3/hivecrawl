@@ -145,6 +145,8 @@ type results struct {
 	images []fcImageResult
 	news   []fcNewsResult
 	meta   types.Meta // how web results (or the first group) were answered
+	// insights: related searches, answers and knowledge panel (web only).
+	insights *types.Insights
 	// retry: nothing came back because routes were blocked or rate
 	// limited (see types.Meta.Retry).
 	retry bool
@@ -200,6 +202,7 @@ func (s *Server) run(w http.ResponseWriter, r *http.Request) (parsed, results, b
 // searchAll runs every requested source (web, images, news) in parallel.
 // Shared by the REST API and MCP.
 func (s *Server) searchAll(ctx context.Context, p parsed) (results, error) {
+	s.Node.CountSearch()
 	if p.timeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, time.Duration(p.timeout)*time.Millisecond)
@@ -264,6 +267,9 @@ func (s *Server) searchAll(ctx context.Context, p parsed) (results, error) {
 			out.retry = out.retry || resp.Meta.Retry
 			switch src {
 			case "web":
+				if p.insights {
+					out.insights = s.Node.Insights(r)
+				}
 				out.web = p.toWeb(resp.Data.Web, limit)
 				for i, t := range intents {
 					if !extra[i].Success || len(extra[i].Data.Web) == 0 {
@@ -411,6 +417,7 @@ func (s *Server) searchV2(w http.ResponseWriter, r *http.Request) {
 		switch src {
 		case "web":
 			out.Data.Web = nonNil(res.web)
+			out.Data.Insights = res.insights
 		case "images":
 			out.Data.Images = nonNil(res.images)
 		case "news":
@@ -440,6 +447,7 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	var peers any = []any{}
 	res := mesh.HostResources()
 	res.Engines = s.Node.EngineCount(r.Context())
+	res.SearchesPerMin, res.Searches = s.Node.SearchesPerMin(), s.Node.SearchesTotal()
 	if s.Node.Mesh != nil && s.Node.Mesh.Enabled() {
 		mode = "home (behind NAT, tunnels out)"
 		if s.PublicURL != "" {
@@ -492,7 +500,7 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 
 // Version is reported to MCP clients and compared with the newest release;
 // release builds set it with -ldflags.
-var Version = "0.4.7"
+var Version = "0.4.8"
 
 func (s *Server) updateStatus() update.Status {
 	st := update.Status{Current: Version, Error: "update check is off (HC_UPDATE_CHECK=false)"}
