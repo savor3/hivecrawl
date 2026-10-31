@@ -228,6 +228,28 @@ table.t td.num { font-family: var(--mono); font-size: 12.5px; }
 .rank h4 { margin: 0 0 10px; font-size: 13px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
 .rank ol { margin: 0; padding: 0 0 0 20px; display: grid; gap: 6px; font-size: 14px; }
 .rank li span { color: var(--muted); font-size: 12.5px; margin-left: 6px; overflow-wrap: anywhere; }
+.live { display: inline-flex; align-items: center; gap: 6px; margin-left: 10px; padding: 1px 9px; border-radius: 99px; background: var(--teal-soft); color: var(--teal); font-size: 12px; font-weight: 600; vertical-align: 1px; }
+.live i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: livepulse 1.6s ease-in-out infinite; }
+@keyframes livepulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.7); } }
+.key { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin: 0 4px -1px 2px; }
+.key.out { background: var(--teal); } .key.in { background: var(--warn); }
+#peers tr { position: relative; }
+#peers tr.moving { transition: transform .6s cubic-bezier(.2, .8, .2, 1); }
+#peers tr.flash-out td { animation: flashout 1.4s ease-out; }
+#peers tr.flash-in td { animation: flashin 1.4s ease-out; }
+#peers tr.flash-out.flash-in td { animation: flashout 1.4s ease-out, flashin 1.4s ease-out .2s; }
+@keyframes flashout { 0% { background: color-mix(in srgb, var(--teal) 32%, transparent); } 100% { background: transparent; } }
+@keyframes flashin { 0% { background: color-mix(in srgb, var(--warn) 30%, transparent); } 100% { background: transparent; } }
+.bump { position: absolute; right: 8px; top: 50%; padding: 1px 7px; border-radius: 99px; font: 600 11.5px var(--mono); pointer-events: none; animation: bump 1.6s ease-out forwards; }
+.bump.out { background: var(--teal); color: #fff; } .bump.in { background: var(--warn); color: #fff; right: 64px; }
+@keyframes bump { 0% { opacity: 0; transform: translateY(-20%); } 15% { opacity: 1; } 100% { opacity: 0; transform: translateY(-160%); } }
+.hscore.up { animation: scoreup 1.2s ease-out; } .hscore.down { animation: scoredown 1.2s ease-out; }
+@keyframes scoreup { 0% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--teal) 45%, transparent); } 100% { box-shadow: none; } }
+@keyframes scoredown { 0% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--warn) 45%, transparent); } 100% { box-shadow: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .live i, #peers tr td, .bump, .hscore { animation: none !important; }
+  #peers tr.moving { transition: none; }
+}
 .hscore { display: inline-block; min-width: 34px; text-align: center; padding: 2px 8px; border-radius: 99px; font: 600 12px var(--mono); }
 .hscore.good { background: var(--teal-soft); color: var(--teal); }
 .hscore.fair { background: var(--info-soft); color: var(--info); }
@@ -591,7 +613,7 @@ textarea.big { font-family: var(--sans); font-size: 15px; resize: vertical; min-
 
   <!-- ===================== NETWORK ===================== -->
   <section class="view" id="view-network">
-    <div class="hero"><h1>Network</h1><p>This node, its engines, and the peers it trades searches with. Refreshes every 5 seconds.</p></div>
+    <div class="hero"><h1>Network</h1><p>This node, its engines, and the peers it trades searches with. <span class="live"><i></i>Live</span></p></div>
     <div class="stats" id="stats"></div>
     <h2>Network pool</h2>
     <p class="side-note" style="margin:-4px 0 12px">Every node this one can see, including itself. Machines are as each node reports them; nodes on older versions don't report and are left out of the totals.</p>
@@ -601,6 +623,7 @@ textarea.big { font-family: var(--sans); font-size: 15px; resize: vertical; min-
     <p class="side-note" style="margin:-4px 0 12px">Web, News and Images engines run on every search of that kind. The others run only when a search asks for their category.</p>
     <div id="engines"></div>
     <h2>Peers</h2>
+    <p class="side-note" style="margin:-4px 0 12px">Ranked by health. A row lights up <span class="key out"></span>teal when this node sends that peer searches and <span class="key in"></span>amber when the peer asks this node.</p>
     <div class="table-wrap"><table class="t"><thead><tr><th>Node</th><th>Health</th><th>Machine</th><th>Route</th><th>Status</th><th>Answered</th><th>Asked / served</th><th>Priority</th><th>Agreement</th><th>Latency</th><th>Online</th></tr></thead><tbody id="peers"></tbody></table></div>
   </section>
 
@@ -717,7 +740,7 @@ function show(view) {
   document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.dataset.view === view));
   document.querySelectorAll(".view").forEach((v) => v.classList.toggle("active", v.id === "view-" + view));
   clearInterval(statusTimer);
-  if (view === "network") { loadStatus(); statusTimer = setInterval(loadStatus, 5000); }
+  if (view === "network") { loadStatus(); statusTimer = setInterval(loadStatus, 2000); }
   if (view === "connect") renderConnect();
   if (view === "settings") { loadSettings(); loadStatus(); }
   if (view === "ai") $("aiNotice").innerHTML = config.llm ? "" : '<div class="notice">This node has no LLM configured, so Extract, Agent and the AI scrape formats are off. Configure one in <a href="#settings" onclick="show(\'settings\');return false">Settings</a> — Anthropic, OpenAI, Gemini, DeepSeek, OpenRouter, Groq and Ollama all work.</div>';
@@ -1237,6 +1260,32 @@ function renderPool(s, peers) {
     list("Most blocked", blockedNodes, (n) => n.blocked.length + " blocked: " + n.blocked.slice(0, 4).join(", ") + (n.blocked.length > 4 ? "…" : ""), "No node reports blocked engines.");
 }
 
+/* ---------- live peer animation ---------- */
+// Rows that moved slide from their old place (FLIP); rows whose counters
+// grew since the last refresh flash and show how many searches went by.
+let lastPeers = null;
+function animatePeers(peers, before) {
+  const prev = lastPeers;
+  lastPeers = Object.fromEntries(peers.map((p) => [p.id, { asked: p.asked, served: p.served, health: p.health ?? -1 }]));
+  if (!prev) return; // first draw: nothing to compare with
+  $("peers").querySelectorAll("tr[data-id]").forEach((tr) => {
+    const id = tr.dataset.id, was = prev[id], now = lastPeers[id];
+    if (before[id] !== undefined) {
+      const dy = before[id] - tr.getBoundingClientRect().top;
+      if (Math.abs(dy) > 2) {
+        tr.style.transform = "translateY(" + dy + "px)";
+        requestAnimationFrame(() => requestAnimationFrame(() => { tr.classList.add("moving"); tr.style.transform = ""; }));
+        tr.addEventListener("transitionend", () => tr.classList.remove("moving"), { once: true });
+      }
+    }
+    if (!was) return;
+    const out = now.asked - was.asked, inc = now.served - was.served, last = tr.lastElementChild;
+    if (out > 0) { tr.classList.add("flash-out"); last.insertAdjacentHTML("beforeend", '<span class="bump out">+' + out + "</span>"); }
+    if (inc > 0) { tr.classList.add("flash-in"); last.insertAdjacentHTML("beforeend", '<span class="bump in">+' + inc + "</span>"); }
+    if (was.health >= 0 && now.health >= 0 && now.health !== was.health) tr.querySelector(".hscore")?.classList.add(now.health > was.health ? "up" : "down");
+  });
+}
+
 /* ---------- network ---------- */
 async function loadStatus() {
   try {
@@ -1274,16 +1323,21 @@ async function loadStatus() {
     $("engines").querySelectorAll(".egroup").forEach((d) => (d.ontoggle = () => { d.open ? engineOpen.add(d.dataset.g) : engineOpen.delete(d.dataset.g); }));
     const name = (id) => { const p = peers.find((x) => x.id === id); return p ? p.name || id.slice(0, 8) : id.slice(0, 8); };
     renderPool(s, peers);
+    // Rank by health (new peers last), then by how much they've answered.
+    peers.sort((a, b) => (b.health ?? -1) - (a.health ?? -1) || b.ok - a.ok || (a.name || a.id).localeCompare(b.name || b.id));
+    const before = {};
+    $("peers").querySelectorAll("tr[data-id]").forEach((tr) => (before[tr.dataset.id] = tr.getBoundingClientRect().top));
     $("peers").innerHTML = peers.length ? peers.map((p) => {
       const route = p.tunneled ? '<span class="badge peer">tunnel → here</span>' : p.url ? '<span class="tag">' + esc(host(p.url)) + "</span>" : p.via ? '<span class="badge">via ' + esc(name(p.via)) + "</span>" : "—";
       const n = p.ok + p.fail, rate = n ? Math.round((p.ok / n) * 100) : null;
-      return "<tr><td><strong>" + esc(p.name || p.id.slice(0, 8)) + "</strong> <span class='tag'>" + esc(p.id.slice(0, 8)) + "</span></td>" +
+      return '<tr data-id="' + esc(p.id) + '"><td><strong>' + esc(p.name || p.id.slice(0, 8)) + "</strong> <span class='tag'>" + esc(p.id.slice(0, 8)) + "</span></td>" +
         "<td>" + healthBadge(p) + "</td><td class='num'>" + machine(p.res) + "</td>" +
         "<td>" + route + "</td><td>" + (p.verified ? '<span class="badge peer">verified</span>' : '<span class="badge">trial</span>') + (p.scrapes ? ' <span class="badge warp">fetches pages</span>' : "") + "</td>" +
         "<td class='num'>" + (rate === null ? "—" : '<span class="bar"><i style="width:' + rate + '%"></i></span>' + p.ok + "/" + n) + "</td>" +
         "<td class='num'>" + p.asked + " / " + p.served + "</td><td class='num'>" + (p.priority || 1).toFixed(2) + "×</td>" +
         "<td class='num'>" + (p.checks ? Math.round(p.agreement * 100) + "%" : "—") + "</td><td class='num'>" + (p.latencyMs ? p.latencyMs + " ms" : "—") + "</td><td class='num'>" + since(p.onlineSince) + "</td></tr>";
     }).join("") : '<tr><td colspan="11" style="color:var(--muted)">No peers yet. Set HC_PEERS and HC_NETWORK_KEY to join a network.</td></tr>';
+    animatePeers(peers, before);
     renderUpdate(s.update);
     $("nodeLabel").textContent = s.node; $("nodeSub").textContent = (s.network === "community" ? "Community" : s.network === "private" ? "Private" : "Standalone") + " · " + peers.length + (peers.length === 1 ? " peer" : " peers");
   } catch (err) {

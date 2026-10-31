@@ -58,6 +58,12 @@ proxies on demand, or features listed under [where Firecrawl is better](#hivecra
 
 ---
 
+## What's new in 0.4.6
+
+- **The Network page is live.** It refreshes every 2 seconds; a peer's row flashes teal when this node sends it
+  searches and amber when it asks this node, with a counter of how many went by, and rows slide into place as
+  peers move up or down the health ranking.
+
 ## What's new in 0.4.5
 
 - **115 search engines instead of 19.** Ordinary web searches now also ask Yandex, Yahoo, Naver, Mwmbl, YaCy,
