@@ -17,7 +17,9 @@
 <sub>Formerly HiveQuery. Nodes running HiveQuery are on a separate network; update and they rejoin as HiveCrawl.</sub>
 
 HiveCrawl gives you Firecrawl's search, scrape, crawl, map, batch scrape, extract and agent endpoints on your own
-machines — no paid search API, no hosted scraping service. Each node runs [SearXNG](https://github.com/searxng/searxng) for results. When search
+machines — no paid search API, no hosted scraping service. Each node runs [SearXNG](https://github.com/searxng/searxng) with about 125 search
+engines: 12 general web indexes on every search, plus specialist ones for research papers, code, packages, videos,
+books, music and more, picked by `categories` or automatically when a query clearly needs them. When search
 engines block a node (CAPTCHAs, `429 Too Many Requests`), the node retries the blocked engines through
 Cloudflare WARP and through other nodes in the network — including home machines behind a router, whose
 residential IPs get blocked far less — and merges everything into one Firecrawl-shaped response.
@@ -261,7 +263,8 @@ machines, with your queries kept off third-party APIs.
 Every screenshot below is the real UI of a running node, with live results (the API key is masked).
 
 **Search the web, news and images** — blocked engines are retried through WARP and peers, and the result says
-which node and engines answered.
+which node and engines answered. Searches about people, places and things get a knowledge panel, every search
+gets related searches, and results several engines agree on are marked.
 
 <p align="center"><img src="docs/assets/ui/search-web.png" alt="Web search results for kerala monsoon forecast with source, engines and blocked engines shown, and a cURL snippet" width="100%"></p>
 
@@ -269,6 +272,10 @@ which node and engines answered.
 <tr>
 <td width="50%"><img src="docs/assets/ui/search-news.png" alt="News results with publish dates and thumbnails"><br><sub><b>News</b> with dates and thumbnails, filterable by time</sub></td>
 <td width="50%"><img src="docs/assets/ui/search-images.png" alt="Image results in a grid with sizes"><br><sub><b>Images</b> with sizes and source pages</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/assets/ui/search-insights.png" alt="Search for albert einstein with a Wikipedia knowledge panel and results marked with how many engines found them"><br><sub><b>Knowledge panel</b>, related searches and engine agreement</sub></td>
+<td width="50%"><img src="docs/assets/ui/search-research.png" alt="Research category search returning papers from arXiv, Europe PMC and Crossref"><br><sub><b>Categories</b>: research papers, code, packages, videos, books…</sub></td>
 </tr>
 </table>
 
@@ -290,7 +297,7 @@ pages, mobile view and PDF/DOCX included.
 </tr>
 <tr>
 <td width="50%"><img src="docs/assets/ui/ai-agent.png" alt="AI agent answer with a cited source"><br><sub><b>Agent</b> searches and reads the web, answers with sources</sub></td>
-<td width="50%"><img src="docs/assets/ui/network.png" alt="Network page with peers, routes and node capabilities"><br><sub><b>Network</b>: peers, routes, verification, capabilities</sub></td>
+<td width="50%"><img src="docs/assets/ui/network.png" alt="Network page with pool totals, node rankings and engine groups"><br><sub><b>Network</b>: pool totals, health rankings, engines by group</sub></td>
 </tr>
 <tr>
 <td width="50%"><img src="docs/assets/ui/connect.png" alt="Connect page with MCP and SDK snippets"><br><sub><b>Connect</b>: MCP and SDK snippets with your URL and key</sub></td>
@@ -478,7 +485,7 @@ One node is four containers from `docker-compose.yml`:
 | Container | Role |
 |---|---|
 | `hivecrawl` | The Go node: API, web UI, MCP, cache, orchestrator, mesh, scraper |
-| `searxng` | Meta-search over Google CSE, Brave, DuckDuckGo, Startpage, Mojeek, Wikipedia; each also has a disabled `<engine> warp` copy that goes out through WARP |
+| `searxng` | Meta-search over about 125 engines (`deploy/searxng/settings.yml`): general web (Google CSE, Brave, DuckDuckGo, Yandex, Yahoo, Naver, Mwmbl, YaCy, 360Search, GMX, Fynd, Wikipedia), news and images on every search; specialist engines kept disabled and run by name for `categories` (`internal/node/verticals.go`); disabled `<engine> warp` copies that go out through WARP |
 | `warp` | Registers a free Cloudflare WARP account on first start (`wgcf`) and exposes it as SOCKS5 inside the compose network only (`wireproxy`) |
 | `browser` | Headless Chrome for JavaScript pages, actions and screenshots, on its own network that only the node can reach |
 
@@ -601,7 +608,7 @@ Every node serves a streamable-HTTP MCP server at `/mcp`, protected by the same 
 
 | Tool | What it does |
 |---|---|
-| `hivecrawl_search` | Web search; `scrape: true` also returns each result's main content as markdown |
+| `hivecrawl_search` | Web search; `scrape: true` also returns each result's main content as markdown, `categories` picks specialist engines (research, developer, packages, pdf…), and answers, a knowledge panel and related searches come with the results |
 | `hivecrawl_scrape` | One page as clean markdown with title and metadata (optionally its links) |
 | `hivecrawl_map` | List a site's URLs |
 | `hivecrawl_crawl`, `hivecrawl_crawl_status` | Crawl a site in the background and read the pages |
