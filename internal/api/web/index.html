@@ -653,7 +653,7 @@ textarea.big { font-family: var(--sans); font-size: 15px; resize: vertical; min-
     <div id="engines"></div>
     <h2>Peers</h2>
     <p class="side-note" style="margin:-4px 0 12px">Ranked by health. A row lights up <span class="key out"></span>teal when this node sends that peer searches, <span class="key in"></span>amber when the peer asks this node, and <span class="key api"></span>blue when it answers searches for anyone (its API, MCP or other peers). Machine stats travel with the nodes' gossip, so they refresh about every 30 seconds.</p>
-    <div class="table-wrap"><table class="t"><thead><tr><th>Node</th><th>Health</th><th>Machine</th><th>Searches</th><th>Route</th><th>Status</th><th>Answered</th><th>Asked / served</th><th>Priority</th><th>Agreement</th><th>Latency</th><th>Online</th></tr></thead><tbody id="peers"></tbody></table></div>
+    <div class="table-wrap"><table class="t"><thead><tr><th>Node</th><th>Health</th><th>Machine</th><th>Searches</th><th title="Every search this node has answered, kept across restarts">Total answered</th><th>Route</th><th>Status</th><th title="Searches this node passed to that peer for help, and how many it answered">Answered for us</th><th title="Searches passed between this node and that peer: to it / from it">Sent to it / to us</th><th>Priority</th><th>Agreement</th><th>Latency</th><th>Online</th></tr></thead><tbody id="peers"></tbody></table></div>
   </section>
 
   <!-- ===================== CONNECT ===================== -->
@@ -1296,9 +1296,15 @@ function machine(r) {
     meter("CPU", ((r.load || 0) / r.cores) * 100, "1-minute load " + (r.load || 0).toFixed(2) + " on " + r.cores + " cores") +
     meter("RAM", used, gb((r.memMb || 0) - (r.memFreeMb || 0)) + " used of " + gb(r.memMb || 0));
 }
+function totalCell(r) {
+  if (!r || !r.cores) return '<span style="color:var(--muted)">—</span>';
+  const all = (r.searches || 0) + (r.failed || 0) > 0 ? (r.searches || 0) : 0;
+  const fail = r.failed ? '<br><span style="color:var(--muted);font-size:12px">' + r.failed.toLocaleString() + " failed (" + (r.searches ? ((r.failed / r.searches) * 100).toFixed(1) : "0") + "%)</span>" : "";
+  return "<strong>" + all.toLocaleString() + "</strong>" + fail;
+}
 function rateCell(r) {
   if (!r || !r.cores) return '<span style="color:var(--muted)">—</span>';
-  return '<span title="' + (r.searches || 0).toLocaleString() + ' since it started"><strong>' + (r.searchesPerMin || 0) + '</strong><span style="color:var(--muted)">/min</span></span>';
+  return '<span title="' + (r.searches || 0).toLocaleString() + ' answered in all"><strong>' + (r.searchesPerMin || 0) + '</strong><span style="color:var(--muted)">/min</span></span>';
 }
 function renderPool(s, peers) {
   const nodes = [{ name: s.node + " (this node)", res: s.res, blocked: Object.keys((s.searxng && s.searxng.blocked) || {}) }, ...peers.filter((p) => p.name || p.url || p.tunneled || p.via)];
@@ -1313,7 +1319,8 @@ function renderPool(s, peers) {
     stat("Nodes", nodes.length, rep.length + " of " + nodes.length + " reporting machines") +
     stat("CPU", cores ? cores + " cores" : "—", cores ? Math.round((load / cores) * 100) + "% busy (1-min load)" : "") +
     stat("Memory", mem ? gb(mem) : "—", mem ? gb(mem - free) + " used · " + Math.round(((mem - free) / mem) * 100) + "%" : "") +
-    stat("Searches / min", rep.length ? sum((r) => r.searchesPerMin).toLocaleString() : "—", rep.length ? sum((r) => r.searches).toLocaleString() + " answered since nodes started" : "") +
+    stat("Searches processed", rep.length ? sum((r) => r.searches).toLocaleString() : "—", rep.length ? "all nodes, kept across restarts · " + sum((r) => r.failed || 0).toLocaleString() + " failed" : "") +
+    stat("Searches / min", rep.length ? sum((r) => r.searchesPerMin).toLocaleString() : "—", rep.length ? "≈ " + (sum((r) => r.searchesPerMin) * 60).toLocaleString() + " / hour" : "") +
     stat("Engines", engines || "—", engines ? "per node; WARP and peers cover blocks" : "") +
     stat("Network health", avg === null ? "—" : avg + " / 100", scored.length + " peers scored · " + scored.filter((p) => p.health >= 85).length + " healthy, " + scored.filter((p) => p.health < 60).length + " poor");
   const label = (p) => esc(p.name || p.id.slice(0, 8));
@@ -1369,6 +1376,7 @@ async function loadStatus() {
       stat("Mode", pub ? "Public" : s.mode.startsWith("home") ? "Home" : "Standalone", s.publicUrl || (s.mode.startsWith("home") ? "behind NAT · tunnels out" : "")) +
       stat("Peers", peers.length, verified + " verified") +
       (pub ? stat("Tunnels", s.tunnels ?? 0, "home nodes relayed here") : "") +
+      (s.res ? stat("Searches", (s.res.searches || 0).toLocaleString(), (s.res.searchesPerMin || 0) + " / min now · " + (s.res.failed || 0).toLocaleString() + " failed") : "") +
       stat("Cache", (ch.entries || 0) + (ch.entries === 1 ? " query" : " queries"), total ? Math.round((hits / total) * 100) + "% hit rate" : "no lookups yet") +
       stat("Uptime", since(new Date(Date.now() - s.uptimeSec * 1000)), "v" + (s.version || "")) +
       stat("AI (LLM)", s.llm ? "on" : "off", s.llm || "set HC_LLM_* to enable") +
@@ -1400,12 +1408,12 @@ async function loadStatus() {
       const route = p.tunneled ? '<span class="badge peer">tunnel → here</span>' : p.url ? '<span class="tag">' + esc(host(p.url)) + "</span>" : p.via ? '<span class="badge">via ' + esc(name(p.via)) + "</span>" : "—";
       const n = p.ok + p.fail, rate = n ? Math.round((p.ok / n) * 100) : null;
       return '<tr data-id="' + esc(p.id) + '"><td><strong>' + esc(p.name || p.id.slice(0, 8)) + "</strong> <span class='tag'>" + esc(p.id.slice(0, 8)) + "</span></td>" +
-        "<td>" + healthBadge(p) + "</td><td class='num'>" + machine(p.res) + "</td><td class='num'>" + rateCell(p.res) + "</td>" +
+        "<td>" + healthBadge(p) + "</td><td class='num'>" + machine(p.res) + "</td><td class='num'>" + rateCell(p.res) + "</td><td class='num'>" + totalCell(p.res) + "</td>" +
         "<td>" + route + "</td><td>" + (p.verified ? '<span class="badge peer">verified</span>' : '<span class="badge">trial</span>') + (p.scrapes ? ' <span class="badge warp">fetches pages</span>' : "") + "</td>" +
         "<td class='num'>" + (rate === null ? "—" : '<span class="bar"><i style="width:' + rate + '%"></i></span>' + p.ok + "/" + n) + "</td>" +
         "<td class='num'>" + p.asked + " / " + p.served + "</td><td class='num'>" + (p.priority || 1).toFixed(2) + "×</td>" +
         "<td class='num'>" + (p.checks ? Math.round(p.agreement * 100) + "%" : "—") + "</td><td class='num'>" + (p.latencyMs ? p.latencyMs + " ms" : "—") + "</td><td class='num'>" + since(p.onlineSince) + "</td></tr>";
-    }).join("") : '<tr><td colspan="12" style="color:var(--muted)">No peers yet. Set HC_PEERS and HC_NETWORK_KEY to join a network.</td></tr>';
+    }).join("") : '<tr><td colspan="13" style="color:var(--muted)">No peers yet. Set HC_PEERS and HC_NETWORK_KEY to join a network.</td></tr>';
     animatePeers(peers, before);
     renderUpdate(s.update);
     $("nodeLabel").textContent = s.node; $("nodeSub").textContent = (s.network === "community" ? "Community" : s.network === "private" ? "Private" : "Standalone") + " · " + peers.length + (peers.length === 1 ? " peer" : " peers");

@@ -17,9 +17,11 @@ type Resources struct {
 	Load      float64 `json:"load,omitempty"` // 1-minute load average
 	Engines   int     `json:"engines,omitempty"`
 	// Searches this node answered (API, MCP and for peers): in the last
-	// minute, and since it started.
+	// minute, and in all (kept across restarts); and how many of those
+	// got nothing back.
 	SearchesPerMin int   `json:"searchesPerMin,omitempty"`
 	Searches       int64 `json:"searches,omitempty"`
+	Failed         int64 `json:"failed,omitempty"`
 }
 
 // HostResources reads this machine's cores, memory and load. Inside a

@@ -60,6 +60,14 @@ proxies on demand, or features listed under [where Firecrawl is better](#hivecra
 
 ---
 
+## What's new in 0.4.11
+
+- **Search totals that last.** Each node keeps how many searches it has answered and how many failed in
+  `counts.json` in its data volume, so the totals add up across restarts and updates. The Network page shows
+  **Searches processed** (all nodes, with failures), **Searches / min** (with the hourly rate) and a **Total answered**
+  column per node; the Node page shows this node's own. The peer columns are renamed **Answered for us** and
+  **Sent to it / to us**: they only count searches nodes pass to each other.
+
 ## What's new in 0.4.10
 
 - **Faster web searches.** yacy and DuckDuckGo are out of ordinary web searches: from every node tested (servers, a

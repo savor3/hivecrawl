@@ -54,9 +54,19 @@ func (n *Node) CountSearch() { n.searches.add() }
 // SearchesPerMin is how many searches this node answered in the last minute.
 func (n *Node) SearchesPerMin() int { return n.searches.perMinute() }
 
-// SearchesTotal is how many searches this node answered since it started.
-func (n *Node) SearchesTotal() int64 {
-	n.searches.mu.Lock()
-	defer n.searches.mu.Unlock()
-	return n.searches.total
+// SearchesTotal is how many searches this node has answered, kept across
+// restarts (see KeepCounts).
+func (n *Node) SearchesTotal() int64 { return n.searches.sum() }
+
+// CountFailed records a search that got nothing back: an error, or a
+// "retry later" because every route was blocked or too slow.
+func (n *Node) CountFailed() { n.failed.add() }
+
+// FailedTotal is how many searches failed, kept across restarts.
+func (n *Node) FailedTotal() int64 { return n.failed.sum() }
+
+func (r *rate) sum() int64 {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.total
 }

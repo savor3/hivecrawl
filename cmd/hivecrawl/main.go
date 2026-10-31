@@ -94,7 +94,7 @@ func main() {
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 			defer cancel()
 			r.Engines = n.EngineCount(ctx)
-			r.SearchesPerMin, r.Searches = n.SearchesPerMin(), n.SearchesTotal()
+			r.SearchesPerMin, r.Searches, r.Failed = n.SearchesPerMin(), n.SearchesTotal(), n.FailedTotal()
 			return r
 		},
 		// Opt-in: fetch pages for peers, with this node's own routes only.
@@ -144,6 +144,7 @@ func main() {
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	saveCounts := n.KeepCounts(ctx, cfg.DataDir)
 	if updates != nil {
 		updates.Start(ctx)
 	}
@@ -173,4 +174,5 @@ func main() {
 	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)
 	}
+	saveCounts()
 }

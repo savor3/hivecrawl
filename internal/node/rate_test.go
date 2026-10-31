@@ -1,6 +1,7 @@
 package node
 
 import (
+	"context"
 	"testing"
 	"time"
 )
@@ -23,5 +24,26 @@ func TestRate(t *testing.T) {
 	now = now.Add(60 * time.Second)
 	if got := r.perMinute(); got != 0 || r.total != 6 {
 		t.Fatalf("later: %d per minute, %d total", got, r.total)
+	}
+}
+
+// Totals saved in the data directory add up across restarts.
+func TestCountsSurviveRestart(t *testing.T) {
+	dir := t.TempDir()
+	ctx, cancel := context.WithCancel(context.Background())
+	a := New("a", nil, nil, 1)
+	save := a.KeepCounts(ctx, dir)
+	for range 3 {
+		a.CountSearch()
+	}
+	a.CountFailed()
+	cancel()
+	save()
+
+	b := New("b", nil, nil, 1)
+	b.KeepCounts(context.Background(), dir)
+	b.CountSearch()
+	if b.SearchesTotal() != 4 || b.FailedTotal() != 1 {
+		t.Fatalf("after restart: %d searches, %d failed; want 4 and 1", b.SearchesTotal(), b.FailedTotal())
 	}
 }

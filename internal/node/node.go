@@ -65,6 +65,7 @@ type Node struct {
 	insights map[string]insight // by cache key; see Insights
 
 	searches rate // searches answered, for the network's pool totals
+	failed   rate // searches that got nothing back
 }
 
 func New(name string, c *cache.Cache, s *searx.Client, minResults int) *Node {

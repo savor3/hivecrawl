@@ -292,7 +292,11 @@ func (s *Server) searchAll(ctx context.Context, p parsed) (results, error) {
 	}
 	wg.Wait()
 	if len(errs) == len(p.sources) {
+		s.Node.CountFailed()
 		return out, errors.New(strings.Join(errs, "; "))
+	}
+	if out.retry && out.empty() {
+		s.Node.CountFailed()
 	}
 	if p.scrape != nil && len(out.web) > 0 {
 		s.scrapeResults(ctx, out.web, *p.scrape)
@@ -447,7 +451,7 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	var peers any = []any{}
 	res := mesh.HostResources()
 	res.Engines = s.Node.EngineCount(r.Context())
-	res.SearchesPerMin, res.Searches = s.Node.SearchesPerMin(), s.Node.SearchesTotal()
+	res.SearchesPerMin, res.Searches, res.Failed = s.Node.SearchesPerMin(), s.Node.SearchesTotal(), s.Node.FailedTotal()
 	if s.Node.Mesh != nil && s.Node.Mesh.Enabled() {
 		mode = "home (behind NAT, tunnels out)"
 		if s.PublicURL != "" {
@@ -500,7 +504,7 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 
 // Version is reported to MCP clients and compared with the newest release;
 // release builds set it with -ldflags.
-var Version = "0.4.10"
+var Version = "0.4.11"
 
 func (s *Server) updateStatus() update.Status {
 	st := update.Status{Current: Version, Error: "update check is off (HC_UPDATE_CHECK=false)"}
