@@ -97,7 +97,7 @@ func (f chromeFetcher) get(ctx context.Context, u *url.URL) (*fetched, error) {
 		switch {
 		case errors.Is(err, errBlockedAddr) || strings.Contains(err.Error(), errBlockedAddr.Error()):
 			return nil, &Error{"SCRAPE_ADDRESS_NOT_ALLOWED", "this URL resolves to a private or internal address"}
-		case errors.As(err, &dnsErr) || strings.Contains(err.Error(), "no such host"):
+		case (errors.As(err, &dnsErr) && dnsErr.IsNotFound) || strings.Contains(err.Error(), "no such host"):
 			return nil, &Error{"SCRAPE_DNS_RESOLUTION_ERROR", "could not resolve " + u.Hostname()}
 		case errors.Is(err, context.DeadlineExceeded) || ctx.Err() != nil:
 			return nil, &Error{"SCRAPE_TIMEOUT", "scrape timed out"}

@@ -218,7 +218,10 @@ func fetchHTTP(ctx context.Context, c *http.Client, u *url.URL) (*fetched, error
 		switch {
 		case errors.Is(err, errBlockedAddr):
 			return nil, &Error{"SCRAPE_ADDRESS_NOT_ALLOWED", "this URL resolves to a private or internal address"}
-		case errors.As(err, &dnsErr):
+		case errors.As(err, &dnsErr) && dnsErr.IsNotFound:
+			// Only a real "no such domain" ends the scrape here; a DNS
+			// timeout or server failure falls through, so WARP and the
+			// other routes still get their turn.
 			return nil, &Error{"SCRAPE_DNS_RESOLUTION_ERROR", "could not resolve " + u.Hostname()}
 		case errors.Is(err, context.DeadlineExceeded):
 			return nil, &Error{"SCRAPE_TIMEOUT", "scrape timed out"}

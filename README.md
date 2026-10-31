@@ -58,6 +58,12 @@ proxies on demand, or features listed under [where Firecrawl is better](#hivecra
 
 ---
 
+## What's new in 0.4.4
+
+- **A slow DNS server no longer looks like a missing website.** A scrape stops straight away only when DNS says the
+  domain doesn't exist; a DNS timeout or server failure now goes on to WARP and the other routes like any other
+  failed fetch.
+
 ## What's new in 0.4.3
 
 - **Nodes that go offline disappear from the Network page.** A node now lists, uses and passes on only peers it

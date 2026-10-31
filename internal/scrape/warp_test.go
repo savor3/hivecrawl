@@ -2,6 +2,7 @@ package scrape
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net"
 	"net/http"
@@ -111,5 +112,39 @@ func TestPeersNotUsedForNormalOrInternalPages(t *testing.T) {
 	(&Scraper{Direct: StdClient(Client(nilDialer())), Peers: peers}).Scrape(context.Background(), "http://127.0.0.1:9/", Options{})
 	if calls != 0 {
 		t.Fatalf("peers asked %d times", calls)
+	}
+}
+
+// dnsFail fails every request with a DNS error, as a resolver would.
+type dnsFail struct{ err *net.DNSError }
+
+func (d dnsFail) RoundTrip(r *http.Request) (*http.Response, error) { return nil, d.err }
+
+// A DNS timeout says nothing about the site, so the other routes are tried;
+// only a real "no such domain" answer ends the scrape at once.
+func TestOnlyMissingDomainsSkipTheOtherRoutes(t *testing.T) {
+	for name, c := range map[string]struct {
+		err      *net.DNSError
+		wantWarp int
+	}{
+		"timeout":   {&net.DNSError{Err: "i/o timeout", Name: "example.com", IsTimeout: true}, 1},
+		"servfail":  {&net.DNSError{Err: "server misbehaving", Name: "example.com", IsTemporary: true}, 1},
+		"no domain": {&net.DNSError{Err: "no such host", Name: "example.com", IsNotFound: true}, 0},
+	} {
+		t.Run(name, func(t *testing.T) {
+			warp := &fakeWarp{}
+			s := &Scraper{Direct: StdClient(&http.Client{Transport: dnsFail{c.err}}), Warp: StdClient(&http.Client{Transport: warp})}
+			_, err := s.Scrape(context.Background(), "https://example.com/fares", Options{OnlyMainContent: true})
+			if warp.calls != c.wantWarp {
+				t.Fatalf("warp calls %d, want %d (err %v)", warp.calls, c.wantWarp, err)
+			}
+			var se *Error
+			if c.wantWarp == 0 && (!errors.As(err, &se) || se.Code != "SCRAPE_DNS_RESOLUTION_ERROR") {
+				t.Fatalf("missing domain: got %v", err)
+			}
+			if c.wantWarp == 1 && err != nil {
+				t.Fatalf("site reachable through WARP, got %v", err)
+			}
+		})
 	}
 }
